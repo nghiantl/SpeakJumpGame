@@ -48,7 +48,7 @@ export function normalizeRewards(input: unknown, date = localDateKey()): Rewards
   const value = input as Partial<RewardsState>;
   if (value.version !== 1) return fallback;
   const rawDaily = value.daily && typeof value.daily === 'object' ? value.daily : fallback.daily;
-  const validChests = new Set(CHESTS.map(chest => chest.id));
+  const validChests = new Set<string>(CHESTS.map(chest => chest.id));
   return {
     version: 1,
     daily: rawDaily.date === date ? {
