@@ -56,3 +56,14 @@ Open the localhost URL printed by Vite. Use HTTPS or localhost to access microph
 - XP and completion are in-memory only and reset after refresh.
 - No backend or pronunciation assessment service is included.
 - Build was not verified in the packaging environment because npm dependency installation timed out. Run `npm install && npm run build` locally before publishing.
+
+## Phase A – Gameplay update
+
+- Phaser platform scene now contains a moving hero, per-challenge obstacle (jump/duck), coins, checkpoints, success particles and a finishing state.
+- React and Phaser communicate through a command serial and `onActionComplete` callback. XP and next challenge are applied **after** the Phaser animation completes.
+- `actionLock`, `attemptId`, and `gameIndex` prevent repeated voice/demo submissions and late recognition results from granting duplicate XP.
+- Pause suspends Phaser animation and cancels the current speech attempt.
+- This is a self-contained first pass using vector art, not yet a full physics-driven scrolling world. The obstacle is a checkpoint animation; arcade collisions and dynamic terrain are a later milestone.
+- Browser speech recognition checks text match, not phonetic accuracy. Demo remains explicitly labelled.
+
+To test: `npm install && npm run build && npm run dev`. Play World 1; click Demo rapidly and verify one XP award per obstacle. Test jump and duck checkpoints, pause, restart and navigation away during a speech attempt.
