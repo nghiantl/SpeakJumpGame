@@ -8,10 +8,11 @@ interface Props {
   total: number;
   actions: GameCommand[];
   paused: boolean;
+  avatarUrl?: string;
   onActionComplete: (index: number) => void;
 }
 
-export default function PhaserGame({ command, serial, total, actions, paused, onActionComplete }: Props) {
+export default function PhaserGame({ command, serial, total, actions, paused, avatarUrl, onActionComplete }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   const game = useRef<Phaser.Game | null>(null);
   const scene = useRef<GameScene | null>(null);
@@ -22,7 +23,7 @@ export default function PhaserGame({ command, serial, total, actions, paused, on
 
   useEffect(() => {
     if (!mount.current) return;
-    const s = new GameScene({ total, actions, onActionComplete: index => latestCallback.current(index) });
+    const s = new GameScene({ total, actions, avatarUrl, onActionComplete: index => latestCallback.current(index) });
     scene.current = s;
     game.current = new Phaser.Game({
       type: Phaser.AUTO, parent: mount.current, width: 800, height: 360,
@@ -42,7 +43,7 @@ export default function PhaserGame({ command, serial, total, actions, paused, on
       scene.current = null;
       queuedCommand.current = null;
     };
-  }, [total]);
+  }, [total, avatarUrl]);
 
   useEffect(() => {
     if (serial !== lastSerial.current) {
