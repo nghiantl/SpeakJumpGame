@@ -39,6 +39,10 @@ export class GameScene extends Phaser.Scene {
   private rightArm!: Phaser.GameObjects.Rectangle;
   private lastGrounded = false;
   private lastFootstep = 0;
+  private emotionUntil = 0;
+  private emotion: 'happy' | 'encourage' | null = null;
+  private emotionLabel: Phaser.GameObjects.Text | null = null;
+  private celebrationRunning = false;
 
   constructor(options: GameSceneOptions) {
     super({ key: 'Adventure' });
@@ -73,6 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.hero.setGravityY(this.gravity);
     this.physics.add.collider(this.hero, this.platforms);
     this.costume = this.createCostume();
+    this.emotionLabel = this.add.text(0, 0, '', { fontFamily: 'Arial', fontSize: '18px', fontStyle: 'bold', color: '#fff', stroke: '#286286', strokeThickness: 4 }).setOrigin(0.5).setDepth(60).setVisible(false);
     this.cameras.main.startFollow(this.hero, true, 0.09, 0.09, -140, 0);
     this.cameras.main.setDeadzone(160, 60);
     this.hero.setVelocityX(this.speed);
@@ -170,8 +175,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
-    if (!this.hero?.active || this.state === 'complete') return;
+    if (!this.hero?.active) return;
     this.costume.setPosition(this.hero.x, this.hero.y);
+    if (this.emotionLabel) {
+      const active = this.emotion !== null && this.time.now < this.emotionUntil;
+      this.emotionLabel.setVisible(active).setPosition(this.hero.x, this.hero.y - 112);
+      if (!active) this.emotion = null;
+    }
+    if (this.state === 'complete') return;
     this.costume.setScale(1, this.ducking ? 0.55 : 1);
     const grounded = !!this.hero.body?.blocked.down;
     const moving = Math.abs(this.hero.body?.velocity.x ?? 0) > 5;
@@ -233,8 +244,39 @@ export class GameScene extends Phaser.Scene {
         this.state = 'approaching';
         this.hero.setVelocityX(this.speed);
       }
+      this.celebrate(this.current >= this.options.total);
       this.options.onActionComplete(done);
     }
+  }
+
+  /** Visual-only feedback: never modifies XP, checkpoint or command state. */
+  showFeedback(kind: 'happy' | 'encourage') {
+    if (!this.hero?.active || !this.sys.isActive()) return;
+    this.emotion = kind;
+    this.emotionUntil = this.time.now + (kind === 'happy' ? 1100 : 1450);
+    this.emotionLabel?.setText(kind === 'happy' ? 'GREAT!' : 'TRY AGAIN!');
+    if (kind === 'happy') this.sparkles(9);
+    else {
+      this.cameras.main.shake(130, 0.002);
+      this.sparkles(3, 0x7ad7f0);
+    }
+  }
+
+  private sparkles(count: number, color = 0xffd65c) {
+    for (let i = 0; i < count; i++) {
+      const x = this.hero.x + Phaser.Math.Between(-28, 28);
+      const y = this.hero.y - Phaser.Math.Between(25, 65);
+      const star = this.add.star(x, y, 5, 3, 7, color).setDepth(40);
+      this.tweens.add({ targets: star, x: x + Phaser.Math.Between(-45, 45), y: y - Phaser.Math.Between(20, 60), alpha: 0, angle: 120, duration: 650, onComplete: () => star.destroy() });
+    }
+  }
+
+  private celebrate(finished: boolean) {
+    if (this.celebrationRunning) return;
+    this.celebrationRunning = true;
+    this.showFeedback('happy');
+    this.sparkles(finished ? 25 : 12);
+    this.time.delayedCall(450, () => { this.celebrationRunning = false; });
   }
 
   private dust(x: number, y: number, count = 5) {
@@ -272,6 +314,8 @@ export class GameScene extends Phaser.Scene {
     this.current = 0;
     this.state = 'approaching';
     this.coinCount = 0;
+    this.emotion = null;
+    this.emotionLabel?.setVisible(false);
     this.coinHud?.setText('0');
     for (const coin of this.coins) { coin.taken = false; coin.circle.setVisible(true).setAlpha(1).setScale(1); }
     this.ducking = false;
