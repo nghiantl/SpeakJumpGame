@@ -32,7 +32,6 @@ export class GameScene extends Phaser.Scene {
   private coins: { x: number; y: number; circle: Phaser.GameObjects.Arc; taken: boolean }[] = [];
   private coinCount = 0;
   private coinHud!: Phaser.GameObjects.Text;
-  private coinHudIcon!: Phaser.GameObjects.Container;
   private leftLeg!: Phaser.GameObjects.Rectangle;
   private rightLeg!: Phaser.GameObjects.Rectangle;
   private leftArm!: Phaser.GameObjects.Rectangle;
@@ -58,7 +57,7 @@ export class GameScene extends Phaser.Scene {
     const coinOuter = this.add.circle(0, 0, 11, 0xf5ae24).setStrokeStyle(2, 0xb87b0d);
     const coinInner = this.add.circle(0, 0, 7, 0xffd45a).setStrokeStyle(1, 0xffe998);
     const coinMark = this.add.text(0, -1, 'C', { fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#98600a' }).setOrigin(0.5);
-    this.coinHudIcon = this.add.container(34, 34, [coinOuter, coinInner, coinMark]).setScrollFactor(0).setDepth(100);
+    this.add.container(34, 34, [coinOuter, coinInner, coinMark]).setScrollFactor(0).setDepth(100);
     this.coinHud = this.add.text(54, 34, '0', { fontFamily: 'Arial', fontSize: '21px', color: '#755010' }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
 
     // The physics sprite is invisible; the visible chibi is attached to its position every frame.
