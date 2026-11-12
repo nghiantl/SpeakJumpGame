@@ -843,3 +843,22 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 }
 @media(max-width:360px) { .game-panel .speechbar { grid-template-columns:1fr; } .topbar .brand small { display:none; } }
 @media(prefers-reduced-motion:reduce) { .f1-progress>div { transition:none; } }
+
+
+/* F.2 — Guided onboarding, accessible pause and retry overlays */
+.f2-game-tools { display:flex; align-items:center; gap:8px; }
+.f2-game-tools .mini { min-height:44px; white-space:normal; }
+.f2-overlay { position:fixed; inset:0; z-index:200; display:flex; justify-content:center; align-items:center; padding:18px; background:rgba(14,43,65,.72); }
+.f2-dialog { width:min(100%,460px); max-height:calc(100dvh - 36px); overflow-y:auto; background:#fff; border:3px solid #c8e7f3; border-radius:24px; padding:24px; text-align:center; box-shadow:0 16px 50px #092a4055; display:flex; flex-direction:column; align-items:center; gap:13px; }
+.f2-dialog h2 { margin:0; color:#255e83; }
+.f2-dialog p { margin:0; line-height:1.55; }
+.f2-tutorial-icon { font-size:56px; line-height:1.2; }
+.f2-dialog-actions { display:flex; flex-wrap:wrap; width:100%; gap:10px; }
+.f2-dialog-actions .btn { flex:1; min-width:135px; min-height:48px; }
+.f2-dialog-actions-column { flex-direction:column; }
+.f2-dialog-actions-column .btn { width:100%; }
+@media(max-width:480px) {
+  .f2-dialog { padding:18px 14px; border-radius:18px; }
+  .f2-game-tools .mini { font-size:12px; padding:7px; }
+}
+@media(prefers-reduced-motion:reduce) { .f2-overlay,.f2-dialog { animation:none!important; transition:none!important; } }

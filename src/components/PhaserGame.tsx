@@ -15,14 +15,17 @@ interface Props {
   feedbackSerial: number;
   onActionComplete: (index: number) => void;
   onReady?: () => void;
+  onCheckpointFail?: () => void;
+  reducedMotion?: boolean;
 }
 
-export default function PhaserGame({ command, serial, total, startIndex, onCoinCollect, actions, paused, avatarUrl, feedback, feedbackSerial, onActionComplete, onReady }: Props) {
+export default function PhaserGame({ command, serial, total, startIndex, onCoinCollect, actions, paused, avatarUrl, feedback, feedbackSerial, onActionComplete, onReady, onCheckpointFail, reducedMotion = false }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   const game = useRef<Phaser.Game | null>(null);
   const scene = useRef<GameScene | null>(null);
   const latestCallback = useRef(onActionComplete);
   const latestReady = useRef(onReady);
+  const latestFail = useRef(onCheckpointFail);
   const latestCoinCallback = useRef(onCoinCollect);
   const lastSerial = useRef(serial);
   const queuedCommand = useRef<{ action: GameCommand; serial: number } | null>(null);
@@ -30,11 +33,12 @@ export default function PhaserGame({ command, serial, total, startIndex, onCoinC
   const queuedFeedback = useRef<'happy' | 'encourage' | null>(null);
   latestCallback.current = onActionComplete;
   latestReady.current = onReady;
+  latestFail.current = onCheckpointFail;
   latestCoinCallback.current = onCoinCollect;
 
   useEffect(() => {
     if (!mount.current) return;
-    const s = new GameScene({ total, actions, avatarUrl, startIndex, onCoinCollect: () => latestCoinCallback.current(), onActionComplete: index => latestCallback.current(index) });
+    const s = new GameScene({ total, actions, avatarUrl, startIndex, reducedMotion, onCheckpointFail: () => latestFail.current?.(), onCoinCollect: () => latestCoinCallback.current(), onActionComplete: index => latestCallback.current(index) });
     scene.current = s;
     game.current = new Phaser.Game({
       type: Phaser.AUTO, parent: mount.current, width: 800, height: 360,
@@ -61,7 +65,7 @@ export default function PhaserGame({ command, serial, total, startIndex, onCoinC
       queuedCommand.current = null;
       queuedFeedback.current = null;
     };
-  }, [total, avatarUrl, startIndex]);
+  }, [total, avatarUrl, startIndex, reducedMotion]);
 
   useEffect(() => {
     if (serial !== lastSerial.current) {
