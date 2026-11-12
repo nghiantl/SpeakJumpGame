@@ -14,19 +14,22 @@ interface Props {
   feedback: 'happy' | 'encourage' | null;
   feedbackSerial: number;
   onActionComplete: (index: number) => void;
+  onReady?: () => void;
 }
 
-export default function PhaserGame({ command, serial, total, startIndex, onCoinCollect, actions, paused, avatarUrl, feedback, feedbackSerial, onActionComplete }: Props) {
+export default function PhaserGame({ command, serial, total, startIndex, onCoinCollect, actions, paused, avatarUrl, feedback, feedbackSerial, onActionComplete, onReady }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   const game = useRef<Phaser.Game | null>(null);
   const scene = useRef<GameScene | null>(null);
   const latestCallback = useRef(onActionComplete);
+  const latestReady = useRef(onReady);
   const latestCoinCallback = useRef(onCoinCollect);
   const lastSerial = useRef(serial);
   const queuedCommand = useRef<{ action: GameCommand; serial: number } | null>(null);
   const lastFeedbackSerial = useRef(feedbackSerial);
   const queuedFeedback = useRef<'happy' | 'encourage' | null>(null);
   latestCallback.current = onActionComplete;
+  latestReady.current = onReady;
   latestCoinCallback.current = onCoinCollect;
 
   useEffect(() => {
@@ -39,7 +42,9 @@ export default function PhaserGame({ command, serial, total, startIndex, onCoinC
       physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
       scene: [s], render: { pixelArt: false, antialias: true },
     });
+    let readyReported = false;
     const flush = () => {
+      if (!readyReported && s.sys.isActive()) { readyReported = true; latestReady.current?.(); }
       const pending = queuedCommand.current;
       if (pending && s.sys.isActive() && s.command(pending.action)) queuedCommand.current = null;
       if (queuedFeedback.current && s.sys.isActive()) {

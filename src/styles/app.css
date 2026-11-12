@@ -807,3 +807,39 @@ footer {
 .engagement-daily small { color: #6d7d80; }
 .engagement-daily .mini { max-width: 100%; white-space: normal; }
 .game-header small { display: block; }
+
+
+/* F.1 — Mobile-first game HUD, sound settings and accessible controls */
+.f1-top-actions { display:flex; align-items:center; gap:8px; min-width:0; }
+.f1-settings-button { min-width:44px; min-height:44px; border:1px solid #cce4ef; border-radius:13px; background:#fff; cursor:pointer; font-size:21px; }
+.f1-settings { position:relative; z-index:30; width:min(100% - 24px, 440px); margin:8px auto 0; padding:16px; background:#fff; border:2px solid #cce6f2; border-radius:18px; box-shadow:0 12px 30px #1d5b7520; display:flex; flex-direction:column; gap:12px; }
+.f1-settings-title { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.f1-settings-title .mini { min-height:44px; }
+.f1-setting-toggle { display:flex; align-items:center; gap:12px; cursor:pointer; }
+.f1-setting-toggle input { width:20px; height:20px; }
+.f1-settings input[type=range] { width:100%; accent-color:#289c9a; }
+.f1-hud { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; width:100%; }
+.f1-hud span { background:#eaf7ff; color:#236483; padding:9px 6px; border-radius:12px; text-align:center; font-size:12px; font-weight:800; min-width:0; overflow-wrap:anywhere; }
+.f1-progress { height:9px; width:100%; border-radius:99px; background:#e4edf4; overflow:hidden; }
+.f1-progress>div { height:100%; border-radius:99px; background:linear-gradient(90deg,#54c7a3,#319bd0); transition:width .25s ease; }
+.f1-stage { width:100%; position:relative; min-width:0; }
+.f1-stage .phaser-mount { width:100%; }
+.f1-loading { position:absolute; z-index:5; inset:0; min-height:160px; display:flex; align-items:center; justify-content:center; background:#e8f7ff; border-radius:15px; color:#276a88; font-weight:800; text-align:center; padding:20px; }
+.f1-shortcuts { display:block; width:100%; text-align:center; color:#517b91; font-size:12px; }
+.game-panel .speechbar button { min-height:52px; touch-action:manipulation; }
+button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-offset:3px; }
+@media(max-width:640px) {
+  .game-panel { width:100%; max-width:100%; padding:12px; gap:12px; overflow:hidden; }
+  .game-panel .game-header { flex-wrap:wrap; }
+  .f1-hud { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+  .f1-hud span { font-size:12px; padding:8px 4px; }
+  .game-panel .game-word { min-width:0; width:100%; }
+  .game-panel .game-word strong { overflow-wrap:anywhere; font-size:clamp(17px,5vw,25px); }
+  .game-panel .speechbar { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); width:100%; gap:8px; }
+  .game-panel .speechbar button { min-width:0; width:100%; padding:10px 6px; font-size:13px; }
+  .f1-shortcuts { display:none; }
+  .f1-top-actions { gap:4px; }
+  .topbar .brand { min-width:0; }
+}
+@media(max-width:360px) { .game-panel .speechbar { grid-template-columns:1fr; } .topbar .brand small { display:none; } }
+@media(prefers-reduced-motion:reduce) { .f1-progress>div { transition:none; } }
