@@ -120,13 +120,18 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < this.options.total; i++) {
       const x = this.obstacleX(i);
       const duck = this.actionAt(i) === 'duck';
+      // E.2: varied obstacle themes, while preserving the original collision geometry.
+      const palette = [0x8a65b5, 0x5b9eac, 0xc47c72, 0x7d88bd];
+      const tint = palette[i % palette.length];
       if (duck) {
-        this.add.rectangle(x, this.floorY - 78, 110, 15, 0x8a65b5).setStrokeStyle(2, 0x624184);
-        this.add.rectangle(x - 53, this.floorY - 43, 9, 70, 0x8a65b5);
-        this.add.rectangle(x + 53, this.floorY - 43, 9, 70, 0x8a65b5);
+        this.add.rectangle(x, this.floorY - 78, 110, 15, tint).setStrokeStyle(2, 0x3d5870);
+        this.add.rectangle(x - 53, this.floorY - 43, 9, 70, tint);
+        this.add.rectangle(x + 53, this.floorY - 43, 9, 70, tint);
+        this.add.text(x, this.floorY - 100, i % 2 ? 'LOW BRIDGE' : 'DUCK!', { fontSize: '13px', color: '#4d477a', fontStyle: 'bold' }).setOrigin(.5);
       } else {
-        this.add.rectangle(x + 23, this.floorY + 14, 114, 28, 0x6b9cc7);
-        this.add.text(x + 23, this.floorY - 54, 'JUMP!', { fontSize: '15px', color: '#246aa0', fontStyle: 'bold' }).setOrigin(.5);
+        this.add.rectangle(x + 23, this.floorY + 14, 114, 28, i % 2 ? 0x80b7aa : 0x6b9cc7);
+        this.add.text(x + 23, this.floorY - 54, i % 2 ? 'LEAP!' : 'JUMP!', { fontSize: '15px', color: '#246aa0', fontStyle: 'bold' }).setOrigin(.5);
+        this.add.star(x + 22, this.floorY - 92, 5, 5, 10, 0xffe28c).setAlpha(.75);
       }
       for (let c = 0; c < 3; c++) {
         const coin = this.add.circle(x + 100 + c * 35, this.floorY - 100 - c % 2 * 20, 10, 0xffcf4d).setStrokeStyle(2, 0xe5a12c);

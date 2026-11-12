@@ -800,3 +800,10 @@ footer {
 .review-item-meta > span { font-size: 12px; background: #e5f1fa; color: #28618b; border-radius: 9px; padding: 5px 8px; }
 .review-item .twobtn { flex-wrap: wrap; }
 .review-item .mini { flex: 1; white-space: normal; }
+
+/* E.2 — Daily adventure and combo rewards */
+.engagement-daily { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; background: linear-gradient(135deg,#fff5d9,#e5f9f1); border: 1px solid #f0dfab; border-radius: 18px; padding: 16px; width: 100%; }
+.engagement-daily strong { color: #80601f; font-size: 15px; }
+.engagement-daily small { color: #6d7d80; }
+.engagement-daily .mini { max-width: 100%; white-space: normal; }
+.game-header small { display: block; }
