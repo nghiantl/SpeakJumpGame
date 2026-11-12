@@ -97,7 +97,7 @@ export function reviewPriority(entry: ReviewEntry, now = new Date()): number {
   return (due ? 100 : 0) + entry.misses * 4 - entry.successes * 2 + (100 - entry.lastScore) / 10;
 }
 export function reviewQueue(state: ReviewState, now = new Date()) {
-  return normalizeReview(state).entries.filter(item => item.misses > 0 || item.lastScore < 100)
+  return normalizeReview(state).entries.filter(item => item.lastScore < 100 || item.successes <= item.misses)
     .sort((a, b) => reviewPriority(b, now) - reviewPriority(a, now));
 }
 export function suggestedDifficulty(state: ReviewState): { level: 'beginner' | 'elementary' | 'intermediate'; reason: string } {
