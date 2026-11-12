@@ -8,6 +8,8 @@ export interface GameSceneOptions {
   avatarUrl?: string;
   startIndex?: number;
   onCoinCollect?: () => void;
+  onCheckpointFail?: () => void;
+  reducedMotion?: boolean;
   onActionComplete: (index: number) => void;
   onPhaseChange?: (phase: GamePhase) => void;
 }
@@ -60,6 +62,7 @@ export class GameScene extends Phaser.Scene {
     this.state = 'approaching';
     this.worldWidth = this.firstObstacleX + Math.max(1, this.options.total) * this.stageLength + 420;
     this.cameras.main.setBackgroundColor('#bdeaff');
+    if (this.options.reducedMotion) this.cameras.main.setLerp(1, 1);
     this.physics.world.setBounds(0, -100, this.worldWidth, 700);
     this.cameras.main.setBounds(0, 0, this.worldWidth, 360);
     this.drawWorld();
@@ -215,7 +218,8 @@ export class GameScene extends Phaser.Scene {
         this.options.onCoinCollect?.();
         this.coinHud.setText(String(this.coinCount));
         this.tweens.killTweensOf(coin.circle);
-        this.tweens.add({ targets: coin.circle, scale: 1.8, alpha: 0, y: coin.circle.y - 24, duration: 260, onComplete: () => coin.circle.destroy() });
+        this.tweens.add({ targets: coin.circle, scale: 1.8, alpha: 0, y: coin.circle.y - 24, duration: this.options.reducedMotion ? 0 : 260, onComplete: () => coin.circle.destroy() });
+        if (!this.options.reducedMotion) this.sparkles(3, 0xffd65c);
       }
     }
     if (this.hero.y > 440) { this.restoreCheckpoint(); return; }
@@ -267,12 +271,13 @@ export class GameScene extends Phaser.Scene {
     this.emotionLabel?.setText(kind === 'happy' ? 'GREAT!' : 'TRY AGAIN!');
     if (kind === 'happy') this.sparkles(9);
     else {
-      this.cameras.main.shake(130, 0.002);
+      if (!this.options.reducedMotion) this.cameras.main.shake(130, 0.002);
       this.sparkles(3, 0x7ad7f0);
     }
   }
 
   private sparkles(count: number, color = 0xffd65c) {
+    if (this.options.reducedMotion) return;
     for (let i = 0; i < count; i++) {
       const x = this.hero.x + Phaser.Math.Between(-28, 28);
       const y = this.hero.y - Phaser.Math.Between(25, 65);
@@ -290,6 +295,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dust(x: number, y: number, count = 5) {
+    if (this.options.reducedMotion) return;
     for (let i = 0; i < count; i++) {
       const puff = this.add.circle(x + Phaser.Math.Between(-12, 12), y - 2, Phaser.Math.Between(2, 5), 0xfff4d5, 0.8).setDepth(15);
       this.tweens.add({ targets: puff, x: puff.x + Phaser.Math.Between(-20, 20), y: puff.y - Phaser.Math.Between(7, 24), alpha: 0, scale: 1.5, duration: 300, onComplete: () => puff.destroy() });
@@ -312,6 +318,7 @@ export class GameScene extends Phaser.Scene {
   private restoreCheckpoint() {
     if (this.resetPending || this.state === 'complete') return;
     this.resetPending = true;
+    this.options.onCheckpointFail?.();
     this.hero.setVelocity(0, 0);
     this.hero.setPosition(this.lastSafeX, this.floorY - 26);
     this.ducking = false;
