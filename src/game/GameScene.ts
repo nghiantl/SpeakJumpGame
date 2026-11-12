@@ -52,7 +52,13 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, -100, this.worldWidth, 700);
     this.cameras.main.setBounds(0, 0, this.worldWidth, 360);
     this.drawWorld();
-    this.coinHud = this.add.text(18, 15, '🪙 0', { fontFamily: 'Arial', fontSize: '21px', color: '#755010', backgroundColor: '#fff3cf', padding: { x: 12, y: 6 } }).setScrollFactor(0).setDepth(100);
+    // Canvas emoji fonts are platform-dependent. Draw the coin using Phaser shapes instead.
+    this.add.rectangle(58, 34, 83, 38, 0xfff3cf).setScrollFactor(0).setDepth(99);
+    const coinOuter = this.add.circle(0, 0, 11, 0xf5ae24).setStrokeStyle(2, 0xb87b0d);
+    const coinInner = this.add.circle(0, 0, 7, 0xffd45a).setStrokeStyle(1, 0xffe998);
+    const coinMark = this.add.text(0, -1, 'C', { fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#98600a' }).setOrigin(0.5);
+    this.add.container(34, 34, [coinOuter, coinInner, coinMark]).setScrollFactor(0).setDepth(100);
+    this.coinHud = this.add.text(54, 34, '0', { fontFamily: 'Arial', fontSize: '21px', color: '#755010' }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
 
     // The physics sprite is invisible; the visible chibi is attached to its position every frame.
     this.add.graphics().fillStyle(0xffffff).fillRect(0, 0, 30, 50).generateTexture('a2-player', 30, 50);
@@ -142,7 +148,12 @@ export class GameScene extends Phaser.Scene {
     const head = this.add.circle(0, -21, 21, 0xf6c29b).setStrokeStyle(2, 0xd49b79);
     const leftEye = this.add.circle(-7, -21, 2, 0x24364b);
     const rightEye = this.add.circle(7, -21, 2, 0x24364b);
-    const hat = this.add.triangle(0, -43, -33, 14, 0, -21, 33, 14, 0xd8b16e).setStrokeStyle(2, 0xa17b45);
+    // Graphics uses explicit container-local coordinates, avoiding Triangle origin offset.
+    const hat = this.add.graphics();
+    hat.fillStyle(0xd8b16e);
+    hat.lineStyle(2, 0xa17b45);
+    hat.fillTriangle(-35, -37, 0, -76, 35, -37);
+    hat.strokeTriangle(-35, -37, 0, -76, 35, -37);
     const brim = this.add.ellipse(0, -32, 75, 8, 0xe9c98e).setStrokeStyle(1, 0x9e7946);
     return this.add.container(this.hero.x, this.hero.y, [this.leftLeg, this.rightLeg, this.leftArm, this.rightArm, body, head, leftEye, rightEye, hat, brim]).setDepth(21);
   }
@@ -170,7 +181,7 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(this.hero.x - coin.x) < 26 && Math.abs(this.hero.y - coin.circle.y) < 58) {
         coin.taken = true;
         this.coinCount++;
-        this.coinHud.setText(`🪙 ${this.coinCount}`);
+        this.coinHud.setText(String(this.coinCount));
         this.tweens.killTweensOf(coin.circle);
         this.tweens.add({ targets: coin.circle, scale: 1.8, alpha: 0, y: coin.circle.y - 24, duration: 260, onComplete: () => coin.circle.destroy() });
       }
@@ -250,7 +261,7 @@ export class GameScene extends Phaser.Scene {
     this.current = 0;
     this.state = 'approaching';
     this.coinCount = 0;
-    this.coinHud?.setText('🪙 0');
+    this.coinHud?.setText('0');
     for (const coin of this.coins) { coin.taken = false; coin.circle.setVisible(true).setAlpha(1).setScale(1); }
     this.ducking = false;
     this.jumpTriggered = false;
