@@ -9,17 +9,26 @@ export interface GameSceneOptions {
   onPhaseChange?: (phase: GamePhase) => void;
 }
 
-/** Phaser owns animation and checkpoints; React owns speech and progression. */
+/** A.2: real Arcade physics, terrain gaps, voice-triggered actions, checkpoints and camera follow. */
 export class GameScene extends Phaser.Scene {
-  private hero!: Phaser.GameObjects.Container;
-  private groundY = 290;
+  private readonly floorY = 305;
+  private readonly stageLength = 560;
+  private readonly firstObstacleX = 510;
+  private readonly speed = 235;
+  private readonly gravity = 1100;
+  private readonly options: GameSceneOptions;
+  private hero!: Phaser.Physics.Arcade.Sprite;
+  private costume!: Phaser.GameObjects.Container;
+  private platforms!: Phaser.Physics.Arcade.StaticGroup;
   private current = 0;
-  private busy = false;
-  private finished = false;
-  private obstacle?: Phaser.GameObjects.Container;
-  private coins: Phaser.GameObjects.Arc[] = [];
-  private options: GameSceneOptions;
-  private particles: Phaser.GameObjects.Arc[] = [];
+  private state: 'approaching' | 'ready' | 'crossing' | 'complete' = 'approaching';
+  private crossingAction: GameCommand = 'jump';
+  private ducking = false;
+  private jumpTriggered = false;
+  private lastSafeX = 110;
+  private worldWidth = 0;
+  private resetPending = false;
+  private stageLabels: Phaser.GameObjects.Text[] = [];
 
   constructor(options: GameSceneOptions) {
     super({ key: 'Adventure' });
@@ -27,129 +36,172 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.current = 0;
+    this.state = 'approaching';
+    this.worldWidth = this.firstObstacleX + Math.max(1, this.options.total) * this.stageLength + 420;
     this.cameras.main.setBackgroundColor('#bdeaff');
-    const sky = this.add.graphics();
-    sky.fillGradientStyle(0x9cdefb, 0x9cdefb, 0xe5f9ff, 0xe5f9ff).fillRect(0, 0, 800, 360);
-    this.add.circle(690, 56, 29, 0xffda73);
-    [[100, 60], [340, 42], [590, 96]].forEach(([x, y]) => {
-      this.add.ellipse(x, y, 125, 28, 0xffffff, .85);
-      this.add.ellipse(x + 25, y - 10, 75, 31, 0xffffff, .8);
+    this.physics.world.setBounds(0, -100, this.worldWidth, 700);
+    this.cameras.main.setBounds(0, 0, this.worldWidth, 360);
+    this.drawWorld();
+
+    // The physics sprite is invisible; the visible chibi is attached to its position every frame.
+    this.add.graphics().fillStyle(0xffffff).fillRect(0, 0, 30, 50).generateTexture('a2-player', 30, 50);
+    this.hero = this.physics.add.sprite(110, this.floorY - 26, 'a2-player');
+    this.hero.setVisible(false).setCollideWorldBounds(false).setDepth(20);
+    this.hero.body!.setSize(26, 48);
+    this.hero.setGravityY(this.gravity);
+    this.physics.add.collider(this.hero, this.platforms);
+    this.costume = this.createCostume();
+    this.cameras.main.startFollow(this.hero, true, 0.09, 0.09, -140, 0);
+    this.cameras.main.setDeadzone(160, 60);
+    this.hero.setVelocityX(this.speed);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stageLabels.length = 0;
+      this.tweens.killAll();
+      this.time.removeAllEvents();
+      this.textures.remove('a2-player');
     });
-    this.add.ellipse(130, 300, 470, 140, 0x91d39a);
-    this.add.ellipse(650, 300, 520, 145, 0x80c991);
-    this.add.rectangle(400, 326, 800, 68, 0x7dc16d);
-    this.add.rectangle(400, 294, 800, 10, 0x4da75c);
-    for (let x = 0; x < 800; x += 46) this.add.triangle(x, 295, 0, 0, 5, -12, 11, 0, 0x4da75c);
-    this.add.text(24, 18, 'SPEAK → JUMP!', { color: '#1f6389', fontSize: '18px', fontStyle: 'bold' });
-    this.add.ellipse(166, 291, 60, 13, 0x245c42, .18);
-    const avatarBody = this.add.rectangle(0, 11, 34, 43, 0x437bc4).setStrokeStyle(2, 0x235b91);
-    const head = this.add.circle(0, -22, 23, 0xf6c29b).setStrokeStyle(2, 0xd49b79);
-    const eyes = [this.add.circle(-7, -21, 2, 0x24364b), this.add.circle(7, -21, 2, 0x24364b)];
-    const hat = this.add.triangle(0, -45, -33, 14, 0, -21, 33, 14, 0xd8b16e).setStrokeStyle(2, 0xa17b45);
-    const brim = this.add.ellipse(0, -33, 76, 9, 0xe9c98e).setStrokeStyle(1, 0x9e7946);
-    this.hero = this.add.container(166, this.groundY - 46, [avatarBody, head, ...eyes, hat, brim]);
-    this.drawCheckpoint();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
   }
 
-  private cleanup() {
-    this.tweens.killAll();
-    this.time.removeAllEvents();
-  }
+  private obstacleX(index: number) { return this.firstObstacleX + index * this.stageLength; }
+  private actionAt(index: number) { return this.options.actions[index] === 'duck' ? 'duck' : 'jump'; }
 
-  private drawCheckpoint() {
-    this.obstacle?.destroy(true);
-    this.coins.forEach(c => c.destroy());
-    this.coins = [];
-    const elements: Phaser.GameObjects.GameObject[] = [];
-    // Alternate hurdle and low bridge to make jump / duck visually distinct.
-    if (this.options.actions[this.current] !== 'duck') {
-      elements.push(this.add.rectangle(0, 0, 76, 14, 0xa8784c));
-      elements.push(this.add.rectangle(-30, 15, 8, 26, 0xa8784c));
-      elements.push(this.add.rectangle(30, 15, 8, 26, 0xa8784c));
-      elements.push(this.add.circle(0, -24, 18, 0xe95957));
-      elements.push(this.add.ellipse(8, -43, 16, 7, 0x53a85d).setAngle(-25));
-    } else {
-      elements.push(this.add.rectangle(0, -45, 110, 15, 0x936fba));
-      elements.push(this.add.rectangle(-48, -19, 9, 43, 0x936fba));
-      elements.push(this.add.rectangle(48, -19, 9, 43, 0x936fba));
-      elements.push(this.add.text(-32, -80, 'DUCK!', { color: '#60438c', fontSize: '15px', fontStyle: 'bold' }));
+  private drawWorld() {
+    this.add.rectangle(this.worldWidth / 2, 245, this.worldWidth, 230, 0x9ed6a2).setDepth(-10);
+    this.add.rectangle(this.worldWidth / 2, 160, this.worldWidth, 260, 0xbdeaff).setDepth(-20);
+    this.platforms = this.physics.add.staticGroup();
+    // Gaps are real holes in the Arcade collision floor, not decorative drawings.
+    const gaps = Array.from({ length: this.options.total }, (_, i) => this.actionAt(i) === 'jump'
+      ? { from: this.obstacleX(i) - 34, to: this.obstacleX(i) + 80 } : null).filter((g): g is {from:number;to:number} => !!g);
+    let start = 0;
+    for (const gap of [...gaps, { from: this.worldWidth, to: this.worldWidth }]) {
+      this.addGround(start, gap.from);
+      start = gap.to;
     }
-    this.obstacle = this.add.container(625, this.groundY - 21, elements);
-    for (let i = 0; i < 3; i++) {
-      const coin = this.add.circle(440 + i * 64, 185 - (i % 2) * 30, 12, 0xffc943).setStrokeStyle(3, 0xe2a52a);
-      this.add.text(coin.x, coin.y, '★', { fontSize: '13px', color: '#fff' }).setOrigin(.5);
-      this.coins.push(coin);
+    for (let i = 0; i < this.options.total; i++) {
+      const x = this.obstacleX(i);
+      const duck = this.actionAt(i) === 'duck';
+      if (duck) {
+        this.add.rectangle(x, this.floorY - 78, 110, 15, 0x8a65b5).setStrokeStyle(2, 0x624184);
+        this.add.rectangle(x - 53, this.floorY - 43, 9, 70, 0x8a65b5);
+        this.add.rectangle(x + 53, this.floorY - 43, 9, 70, 0x8a65b5);
+      } else {
+        this.add.rectangle(x + 23, this.floorY + 14, 114, 28, 0x6b9cc7);
+        this.add.text(x + 23, this.floorY - 54, 'JUMP!', { fontSize: '15px', color: '#246aa0', fontStyle: 'bold' }).setOrigin(.5);
+      }
+      for (let c = 0; c < 3; c++) {
+        const coin = this.add.circle(x + 100 + c * 35, this.floorY - 100 - c % 2 * 20, 10, 0xffcf4d).setStrokeStyle(2, 0xe5a12c);
+        this.tweens.add({ targets: coin, y: coin.y - 8, yoyo: true, repeat: -1, duration: 650 + c * 90 });
+      }
+      const label = this.add.text(x - 132, this.floorY - 115, `CHECKPOINT ${i + 1}`, { fontSize: '14px', color: '#235c7c', fontStyle: 'bold' });
+      this.stageLabels.push(label);
     }
-    this.options.onPhaseChange?.('ready');
+    for (let x = 130; x < this.worldWidth; x += 260) {
+      this.add.ellipse(x, 85 + (x % 3) * 8, 110, 26, 0xffffff, 0.7).setDepth(-12);
+    }
   }
 
-  /** Returns false when the command is stale, paused or animation is in progress. */
+  private addGround(from: number, to: number) {
+    const width = to - from;
+    if (width <= 0) return;
+    const x = (from + to) / 2;
+    this.add.rectangle(x, this.floorY + 28, width, 55, 0x7cc16e).setDepth(-2);
+    this.add.rectangle(x, this.floorY + 3, width, 9, 0x4fa85c).setDepth(-1);
+    const ground = this.add.rectangle(x, this.floorY + 15, width, 30, 0x7cc16e).setVisible(false);
+    this.physics.add.existing(ground, true);
+    this.platforms.add(ground);
+  }
+
+  private createCostume() {
+    const body = this.add.rectangle(0, 9, 31, 38, 0x437bc4).setStrokeStyle(2, 0x235b91);
+    const head = this.add.circle(0, -21, 21, 0xf6c29b).setStrokeStyle(2, 0xd49b79);
+    const leftEye = this.add.circle(-7, -21, 2, 0x24364b);
+    const rightEye = this.add.circle(7, -21, 2, 0x24364b);
+    const hat = this.add.triangle(0, -43, -33, 14, 0, -21, 33, 14, 0xd8b16e).setStrokeStyle(2, 0xa17b45);
+    const brim = this.add.ellipse(0, -32, 75, 8, 0xe9c98e).setStrokeStyle(1, 0x9e7946);
+    return this.add.container(this.hero.x, this.hero.y, [body, head, leftEye, rightEye, hat, brim]).setDepth(21);
+  }
+
+  update() {
+    if (!this.hero?.active || this.state === 'complete') return;
+    this.costume.setPosition(this.hero.x, this.hero.y);
+    this.costume.setScale(1, this.ducking ? 0.55 : 1);
+    if (this.hero.y > 440) { this.restoreCheckpoint(); return; }
+    const x = this.obstacleX(this.current);
+    if (this.state === 'approaching') {
+      if (this.hero.x >= x - 145) {
+        this.hero.setVelocityX(0);
+        this.hero.setX(x - 145);
+        this.lastSafeX = this.hero.x;
+        this.state = 'ready';
+        this.options.onPhaseChange?.('ready');
+      }
+      return;
+    }
+    if (this.state !== 'crossing') return;
+    if (this.crossingAction === 'jump' && !this.jumpTriggered && this.hero.x >= x - 115) {
+      this.jumpTriggered = true;
+      this.hero.setVelocityY(-550);
+    }
+    if (this.crossingAction === 'duck') {
+      const shouldDuck = this.hero.x >= x - 83 && this.hero.x <= x + 83;
+      this.ducking = shouldDuck;
+      // The overhead bridge is a hazard; standing under it would fail the checkpoint.
+      if (Math.abs(this.hero.x - x) < 52 && !this.ducking) { this.restoreCheckpoint(); return; }
+    }
+    if (this.hero.x >= x + 145 && this.hero.body?.blocked.down) {
+      this.ducking = false;
+      this.hero.setVelocityX(0);
+      const done = this.current;
+      this.current++;
+      this.jumpTriggered = false;
+      if (this.current >= this.options.total) {
+        this.state = 'complete';
+        this.options.onPhaseChange?.('finished');
+      } else {
+        this.state = 'approaching';
+        this.hero.setVelocityX(this.speed);
+      }
+      this.options.onActionComplete(done);
+    }
+  }
+
   command(action: GameCommand): boolean {
-    if (action === 'reset') {
-      this.resetLevel();
-      return true;
-    }
-    if (this.busy || this.finished || !this.scene.isActive()) return false;
-    this.busy = true;
+    if (action === 'reset') { this.resetLevel(); return true; }
+    if (!this.sys.isActive() || this.state !== 'ready') return false;
+    if (action !== this.actionAt(this.current)) return false;
+    this.crossingAction = action;
+    this.jumpTriggered = false;
+    this.ducking = false;
+    this.state = 'crossing';
     this.options.onPhaseChange?.('moving');
-    // const originX = 166;
-    const originY = this.groundY - 46;
-    if (action === 'jump') {
-      this.tweens.add({ targets: this.hero, x: 400, y: originY - 115, duration: 500, ease: 'Sine.easeOut',
-        onComplete: () => this.tweens.add({ targets: this.hero, x: 690, y: originY, duration: 500, ease: 'Sine.easeIn', onComplete: () => this.finishAction() }) });
-    } else {
-      this.tweens.add({ targets: this.hero, x: 390, duration: 380, ease: 'Linear',
-        onComplete: () => {
-          this.tweens.add({ targets: this.hero, scaleY: .48, duration: 140, onComplete: () => {
-            this.tweens.add({ targets: this.hero, x: 690, duration: 550, ease: 'Linear', onComplete: () => {
-              this.tweens.add({ targets: this.hero, scaleY: 1, duration: 160, onComplete: () => this.finishAction() });
-            } });
-          } });
-        } });
-    }
+    this.hero.setVelocityX(this.speed);
     return true;
   }
 
-  private finishAction() {
-    if (!this.sys.isActive()) return;
-    this.coins.forEach(c => this.tweens.add({ targets: c, alpha: 0, scale: 1.7, duration: 200 }));
-    for (let i = 0; i < 8; i++) {
-      const p = this.add.circle(this.hero.x, this.hero.y - 25, 4, 0xffd34f);
-      this.particles.push(p);
-      this.tweens.add({ targets: p, x: p.x + Phaser.Math.Between(-65, 65), y: p.y + Phaser.Math.Between(-70, 25), alpha: 0, duration: 520, onComplete: () => p.destroy() });
-    }
-    const finishedIndex = this.current;
-    this.current += 1;
-    this.busy = false;
-    if (this.current >= this.options.total) {
-      this.finished = true;
-      this.options.onPhaseChange?.('finished');
-    }
-    this.options.onActionComplete(finishedIndex);
-    if (!this.finished) {
-      this.time.delayedCall(350, () => {
-        if (!this.sys.isActive()) return;
-        this.hero.setPosition(166, this.groundY - 46);
-        this.hero.setScale(1);
-        this.drawCheckpoint();
-      });
-    }
+  private restoreCheckpoint() {
+    if (this.resetPending || this.state === 'complete') return;
+    this.resetPending = true;
+    this.hero.setVelocity(0, 0);
+    this.hero.setPosition(this.lastSafeX, this.floorY - 26);
+    this.ducking = false;
+    this.jumpTriggered = false;
+    this.state = 'ready';
+    this.time.delayedCall(180, () => { this.resetPending = false; this.options.onPhaseChange?.('ready'); });
   }
 
   private resetLevel() {
-    this.tweens.killAll();
-    this.time.removeAllEvents();
     this.current = 0;
-    this.busy = false;
-    this.finished = false;
-    this.hero.setPosition(166, this.groundY - 46);
-    this.hero.setScale(1);
-    this.drawCheckpoint();
+    this.state = 'approaching';
+    this.ducking = false;
+    this.jumpTriggered = false;
+    this.resetPending = false;
+    this.hero.setPosition(110, this.floorY - 26).setVelocity(this.speed, 0);
+    this.lastSafeX = 110;
   }
 
   setPaused(paused: boolean) {
-    if (paused) this.scene.pause();
-    else this.scene.resume();
+    if (paused && this.scene.isActive()) this.scene.pause();
+    else if (!paused && this.scene.isPaused()) this.scene.resume();
   }
 }
