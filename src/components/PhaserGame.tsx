@@ -51,6 +51,6 @@ export default function PhaserGame({ command, serial, total, actions, paused, on
     }
   }, [serial, command]);
 
-  useEffect(() => { scene.current?.setPaused(paused); }, [paused]);
+  useEffect(() => { scene?.current?.setPaused(paused); }, [paused]);
   return <div className="phaser-mount" ref={mount} aria-label="Speak and Jump Arcade physics platform game" />;
 }

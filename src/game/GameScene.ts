@@ -201,7 +201,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   setPaused(paused: boolean) {
-    if (paused && this.scene.isActive()) this.scene.pause();
-    else if (!paused && this.scene.isPaused()) this.scene.resume();
+    if (paused && this.scene?.isActive()) this.scene?.pause();
+    else if (!paused && this.scene?.isPaused()) this.scene?.resume();
   }
 }
