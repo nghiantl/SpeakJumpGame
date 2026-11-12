@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   private emotion: 'happy' | 'encourage' | null = null;
   private emotionLabel: Phaser.GameObjects.Text | null = null;
   private celebrationRunning = false;
+  private readonly lightweight = typeof navigator !== 'undefined' && navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4;
 
   constructor(options: GameSceneOptions) {
     super({ key: 'Adventure' });
@@ -139,12 +140,12 @@ export class GameScene extends Phaser.Scene {
       for (let c = 0; c < 3; c++) {
         const coin = this.add.circle(x + 100 + c * 35, this.floorY - 100 - c % 2 * 20, 10, 0xffcf4d).setStrokeStyle(2, 0xe5a12c);
         this.coins.push({ x: coin.x, y: coin.y, circle: coin, taken: false });
-        this.tweens.add({ targets: coin, y: coin.y - 8, yoyo: true, repeat: -1, duration: 650 + c * 90 });
+        if (!this.options.reducedMotion && !this.lightweight) this.tweens.add({ targets: coin, y: coin.y - 8, yoyo: true, repeat: -1, duration: 650 + c * 90 });
       }
       const label = this.add.text(x - 132, this.floorY - 115, `CHECKPOINT ${i + 1}`, { fontSize: '14px', color: '#235c7c', fontStyle: 'bold' });
       this.stageLabels.push(label);
       const flag = this.add.triangle(x - 142, this.floorY - 65, 0, 0, 0, 32, 46, 15, 0xffac60).setDepth(2);
-      this.tweens.add({ targets: flag, scaleX: 0.88, duration: 650, yoyo: true, repeat: -1 });
+      if (!this.options.reducedMotion && !this.lightweight) this.tweens.add({ targets: flag, scaleX: 0.88, duration: 650, yoyo: true, repeat: -1 });
     }
     for (let x = 130; x < this.worldWidth; x += 260) {
       this.add.ellipse(x, 85 + (x % 3) * 8, 110, 26, 0xffffff, 0.7).setDepth(-12);
@@ -278,6 +279,7 @@ export class GameScene extends Phaser.Scene {
 
   private sparkles(count: number, color = 0xffd65c) {
     if (this.options.reducedMotion) return;
+    count = this.lightweight ? Math.min(count, 6) : count;
     for (let i = 0; i < count; i++) {
       const x = this.hero.x + Phaser.Math.Between(-28, 28);
       const y = this.hero.y - Phaser.Math.Between(25, 65);
