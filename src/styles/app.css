@@ -785,3 +785,18 @@ footer {
 .analytics-event > div strong { font-size: 13px; }
 .analytics-event > strong { color: #27966b; white-space: nowrap; font-size: 12px; }
 @media (max-width: 430px) { .analytics-panel { padding: 15px; } .analytics-chart { gap: 3px; padding: 12px 3px; } .analytics-day small { font-size: 9px; } }
+
+
+/* D.2 — Personalized Learning & Smart Review */
+.review-panel { gap: 15px; }
+.review-suggestion { background: #eaf8f2; border: 1px solid #c9e9d9; border-radius: 17px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+.review-suggestion .mini { align-self: flex-start; white-space: normal; }
+.review-item { background: #f5fafe; border: 1px solid #e0edf7; border-radius: 17px; padding: 14px; display: flex; flex-direction: column; gap: 9px; }
+.review-item-heading { display: flex; align-items: center; gap: 12px; }
+.review-item-heading > span { font-size: 29px; }
+.review-item-heading > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.review-item-heading strong { overflow-wrap: anywhere; }
+.review-item-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.review-item-meta > span { font-size: 12px; background: #e5f1fa; color: #28618b; border-radius: 9px; padding: 5px 8px; }
+.review-item .twobtn { flex-wrap: wrap; }
+.review-item .mini { flex: 1; white-space: normal; }
