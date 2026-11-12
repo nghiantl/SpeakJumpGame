@@ -66,7 +66,7 @@ function App(){
    trackReward('challenge');
    setCheckpoints(c=>c.map((n,i)=>i===world?Math.max(n,gameIndex.current):n));
    if(gameIndex.current>=selected.challenges.length){
-     if(!completed.includes(world))trackReward('world');
+     trackReward('world');
      setCompleted(c=>[...new Set([...c,world])]);
      screenRef.current='result';
      setScreen('result');
