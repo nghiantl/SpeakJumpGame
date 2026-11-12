@@ -23,6 +23,8 @@ function App(){
  const [engagement,setEngagement]=useState(readEngagement);
  const engagementRef=useRef<EngagementState>(engagement);
  const [combo,setCombo]=useState(0);
+ const comboRef=useRef(0);
+ function resetCombo(){comboRef.current=0;setCombo(0)}
  const [engagementNotice,setEngagementNotice]=useState('');
  function saveEngagement(next:EngagementState){engagementRef.current=next;setEngagement(next);if(!writeEngagement(next))setSaveWarning(true)}
  const reviewRef=useRef<ReviewState>(review);
@@ -66,9 +68,9 @@ function App(){
  }
  const hasProgress=xp>0||completed.length>0||checkpoints.some(n=>n>0);
  useEffect(()=>{const ok=writeProgress({version:1,name,photo,xp,completed,mode,world,checkpoints,coins});setSaveWarning(!ok)},[name,photo,xp,completed,mode,world,checkpoints,coins]);
- function enterGame(){setCombo(0);setEngagementNotice('');const start=completed.includes(world)?0:Math.min(checkpoints[world]||0,selected.challenges.length-1);gameIndex.current=start;setSessionStart(start);setIdx(start);go('game');gameIndex.current=start}
+ function enterGame(){resetCombo();setEngagementNotice('');const start=completed.includes(world)?0:Math.min(checkpoints[world]||0,selected.challenges.length-1);gameIndex.current=start;setSessionStart(start);setIdx(start);go('game');gameIndex.current=start}
  function continueJourney(){const target=completed.includes(world)?0:Math.min(checkpoints[world]||0,selected.challenges.length-1);setIdx(target);go('detail')}
- function resetProgress(){if(!window.confirm('Xóa toàn bộ XP, avatar, xu và tiến trình trên thiết bị này?'))return;clearProgress();clearRewards();clearAnalytics();clearReview();clearEngagement();const cleanEngagement=initialEngagement();engagementRef.current=cleanEngagement;setEngagement(cleanEngagement);setCombo(0);setEngagementNotice('');const freshReview=initialReview();reviewRef.current=freshReview;setReview(freshReview);setReviewMessage('');const empty=initialAnalytics();analyticsRef.current=empty;setAnalytics(empty);saveRewards(initialRewards());setRewardNotice('');const fresh=initialProgress();setName(fresh.name);setPhoto(fresh.photo);setXp(0);setCompleted([]);setMode(fresh.mode);setWorld(0);setCheckpoints(fresh.checkpoints);setCoins(fresh.coins);setIdx(0);setSessionStart(0);go('welcome')}
+ function resetProgress(){if(!window.confirm('Xóa toàn bộ XP, avatar, xu và tiến trình trên thiết bị này?'))return;clearProgress();clearRewards();clearAnalytics();clearReview();clearEngagement();const cleanEngagement=initialEngagement();engagementRef.current=cleanEngagement;setEngagement(cleanEngagement);resetCombo();setEngagementNotice('');const freshReview=initialReview();reviewRef.current=freshReview;setReview(freshReview);setReviewMessage('');const empty=initialAnalytics();analyticsRef.current=empty;setAnalytics(empty);saveRewards(initialRewards());setRewardNotice('');const fresh=initialProgress();setName(fresh.name);setPhoto(fresh.photo);setXp(0);setCompleted([]);setMode(fresh.mode);setWorld(0);setCheckpoints(fresh.checkpoints);setCoins(fresh.coins);setIdx(0);setSessionStart(0);go('welcome')}
  function collectCoin(){setCoins(c=>c.map((n,i)=>i===world?n+1:n));trackReward('coin')}
  function go(s:Screen){screenRef.current=s;actionLock.current=false;gameIndex.current=0;setPaused(false);setListening(false);setReviewBusy(false);attemptId.current++;recognition.current?.abort?.();if(pending.current)clearTimeout(pending.current);stream.current?.getTracks().forEach(t=>t.stop());setCamera(false);setHistory(h=>[...h,screen]);setScreen(s);setStatus('')}
  function back(){actionLock.current=false;setPaused(false);setListening(false);attemptId.current++;recognition.current?.abort?.();if(pending.current)clearTimeout(pending.current);stream.current?.getTracks().forEach(t=>t.stop());setCamera(false);setHistory(h=>{if(h.length){screenRef.current=h[h.length-1];setScreen(h[h.length-1]);return h.slice(0,-1)}screenRef.current='map';setScreen('map');return []})}
@@ -92,7 +94,7 @@ function App(){
  function actionComplete(finishedIndex:number){
    if(screenRef.current!=='game'||finishedIndex!==gameIndex.current)return;
    gameIndex.current++;
-   const nextCombo=combo+1;setCombo(nextCombo);
+   const nextCombo=comboRef.current+1;comboRef.current=nextCombo;setCombo(nextCombo);
    saveEngagement(recordCombo(engagementRef.current,nextCombo));
    const comboKey=`${localDateKey()}:${world}:combo3`;
    if(nextCombo===3){const bonus=claimComboBonus(engagementRef.current,comboKey);if(bonus){saveEngagement(bonus);setXp(v=>v+30);setEngagementNotice('🔥 Combo 3! Thưởng +30 XP (mỗi thế giới một lần/ngày).')}}
@@ -134,7 +136,7 @@ function App(){
        const accepted=alternatives.some(a=>normalize(a)===normalize(expected));
        trackSpeech(world,idx,Math.max(0,...alternatives.map(a=>transcriptScore(expected,a))),accepted);
        if(accepted)success();
-       else {setCombo(0);setStatus('Chưa khớp nội dung. Nghe mẫu và thử lại nhé!');emitFeedback('encourage')}
+       else {resetCombo();setStatus('Chưa khớp nội dung. Nghe mẫu và thử lại nhé!');emitFeedback('encourage')}
      };
      r.onerror=()=>{if(currentAttempt===attemptId.current){setListening(false);setStatus('Không thể nhận diện giọng nói. Hãy thử lại.')}};
      r.onend=()=>{if(currentAttempt===attemptId.current)setListening(false)};
