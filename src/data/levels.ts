@@ -1,0 +1,8 @@
+export type Challenge={word:string;meaning:string;emoji:string;ipa:string;action:'jump'|'duck'};
+export type World={id:number;title:string;subtitle:string;icon:string;color:string;challenges:Challenge[]};
+export const worlds:World[]=[
+{id:1,title:'Word Island',subtitle:'Từ đơn',icon:'🌳',color:'#54bd82',challenges:[{word:'Apple',meaning:'Quả táo',emoji:'🍎',ipa:'/ˈæp.əl/',action:'jump'},{word:'Banana',meaning:'Quả chuối',emoji:'🍌',ipa:'/bəˈnæn.ə/',action:'jump'},{word:'Orange',meaning:'Quả cam',emoji:'🍊',ipa:'/ˈɔːr.ɪndʒ/',action:'duck'},{word:'Mango',meaning:'Quả xoài',emoji:'🥭',ipa:'/ˈmæŋ.ɡoʊ/',action:'jump'},{word:'Grape',meaning:'Quả nho',emoji:'🍇',ipa:'/ɡreɪp/',action:'jump'}]},
+{id:2,title:'Phrase Valley',subtitle:'Từ ghép và cụm từ',icon:'🏕️',color:'#59bce5',challenges:[{word:'Football',meaning:'Bóng đá',emoji:'⚽',ipa:'/ˈfʊt.bɔːl/',action:'jump'},{word:'Ice cream',meaning:'Kem',emoji:'🍦',ipa:'/ˈaɪs kriːm/',action:'duck'},{word:'Red apple',meaning:'Táo đỏ',emoji:'🍎',ipa:'/red ˈæp.əl/',action:'jump'}]},
+{id:3,title:'Sentence City',subtitle:'Câu đơn',icon:'🏙️',color:'#f5b854',challenges:[{word:'I like apples.',meaning:'Tôi thích táo.',emoji:'🍎',ipa:'',action:'jump'},{word:'I can jump.',meaning:'Tôi có thể nhảy.',emoji:'🦘',ipa:'',action:'jump'},{word:'The cat is sleeping.',meaning:'Con mèo đang ngủ.',emoji:'🐈',ipa:'',action:'duck'}]},
+{id:4,title:'Grammar Castle',subtitle:'Câu phức',icon:'🏰',color:'#ac8be6',challenges:[{word:'If it rains, I will use an umbrella.',meaning:'Nếu trời mưa, tôi sẽ dùng ô.',emoji:'☂️',ipa:'',action:'jump'},{word:'When the light turns green, I will jump.',meaning:'Khi đèn chuyển xanh, tôi sẽ nhảy.',emoji:'🚦',ipa:'',action:'jump'}]}
+];
