@@ -31,9 +31,9 @@ export default function PhaserGame({ command, serial, total, actions, paused, on
   useEffect(() => {
     if (serial !== lastSerial.current) {
       lastSerial.current = serial;
-      if (scene.current?.sys.isActive()) scene.current.command(command);
+      if (scene.current?.sys?.isActive()) scene?.current?.command(command);
     }
   }, [serial, command]);
-  useEffect(() => { if (scene.current?.sys.isActive() || scene.current?.scene.isPaused()) scene.current?.setPaused(paused); }, [paused]);
+  useEffect(() => { if (scene.current?.sys?.isActive() || scene.current?.scene?.isPaused()) scene.current?.setPaused(paused); }, [paused]);
   return <div className="phaser-mount" ref={mount} aria-label="Speak and Jump platform game" />;
 }
