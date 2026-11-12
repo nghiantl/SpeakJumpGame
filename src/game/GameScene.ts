@@ -93,7 +93,7 @@ export class GameScene extends Phaser.Scene {
     if (this.busy || this.finished || !this.scene.isActive()) return false;
     this.busy = true;
     this.options.onPhaseChange?.('moving');
-    const originX = 166;
+    // const originX = 166;
     const originY = this.groundY - 46;
     if (action === 'jump') {
       this.tweens.add({ targets: this.hero, x: 400, y: originY - 115, duration: 500, ease: 'Sine.easeOut',
