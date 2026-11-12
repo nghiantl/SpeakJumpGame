@@ -5,6 +5,7 @@ export type GamePhase = 'ready' | 'moving' | 'finished';
 export interface GameSceneOptions {
   total: number;
   actions: GameCommand[];
+  avatarUrl?: string;
   onActionComplete: (index: number) => void;
   onPhaseChange?: (phase: GamePhase) => void;
 }
@@ -44,6 +45,10 @@ export class GameScene extends Phaser.Scene {
     this.options = options;
   }
 
+  preload() {
+    if (this.options.avatarUrl) this.load.image('b1-face', this.options.avatarUrl);
+  }
+
   create() {
     this.current = 0;
     this.state = 'approaching';
@@ -77,6 +82,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.killAll();
       this.time.removeAllEvents();
       this.textures.remove('a2-player');
+      if (this.textures.exists('b1-face')) this.textures.remove('b1-face');
     });
   }
 
@@ -146,8 +152,13 @@ export class GameScene extends Phaser.Scene {
     this.rightArm = this.add.rectangle(20, 10, 10, 26, 0xf6c29b).setStrokeStyle(1, 0xd49b79);
     const body = this.add.rectangle(0, 9, 31, 38, 0x437bc4).setStrokeStyle(2, 0x235b91);
     const head = this.add.circle(0, -21, 21, 0xf6c29b).setStrokeStyle(2, 0xd49b79);
-    const leftEye = this.add.circle(-7, -21, 2, 0x24364b);
-    const rightEye = this.add.circle(7, -21, 2, 0x24364b);
+    // A circular, transparent avatar is prepared on-device in React.
+    // Keep the original cartoon face as a fallback when no image is provided.
+    const face = this.textures.exists('b1-face')
+      ? this.add.image(0, -21, 'b1-face').setDisplaySize(40, 40)
+      : null;
+    const leftEye = face ? null : this.add.circle(-7, -21, 2, 0x24364b);
+    const rightEye = face ? null : this.add.circle(7, -21, 2, 0x24364b);
     // Graphics uses explicit container-local coordinates, avoiding Triangle origin offset.
     const hat = this.add.graphics();
     hat.fillStyle(0xd8b16e);
@@ -155,7 +166,7 @@ export class GameScene extends Phaser.Scene {
     hat.fillTriangle(-35, -37, 0, -76, 35, -37);
     hat.strokeTriangle(-35, -37, 0, -76, 35, -37);
     const brim = this.add.ellipse(0, -32, 75, 8, 0xe9c98e).setStrokeStyle(1, 0x9e7946);
-    return this.add.container(this.hero.x, this.hero.y, [this.leftLeg, this.rightLeg, this.leftArm, this.rightArm, body, head, leftEye, rightEye, hat, brim]).setDepth(21);
+    return this.add.container(this.hero.x, this.hero.y, [this.leftLeg, this.rightLeg, this.leftArm, this.rightArm, body, head, ...(face ? [face] : [leftEye!, rightEye!]), hat, brim]).setDepth(21);
   }
 
   update() {
