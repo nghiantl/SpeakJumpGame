@@ -29,6 +29,15 @@ export class GameScene extends Phaser.Scene {
   private worldWidth = 0;
   private resetPending = false;
   private stageLabels: Phaser.GameObjects.Text[] = [];
+  private coins: { x: number; y: number; circle: Phaser.GameObjects.Arc; taken: boolean }[] = [];
+  private coinCount = 0;
+  private coinHud!: Phaser.GameObjects.Text;
+  private leftLeg!: Phaser.GameObjects.Rectangle;
+  private rightLeg!: Phaser.GameObjects.Rectangle;
+  private leftArm!: Phaser.GameObjects.Rectangle;
+  private rightArm!: Phaser.GameObjects.Rectangle;
+  private lastGrounded = false;
+  private lastFootstep = 0;
 
   constructor(options: GameSceneOptions) {
     super({ key: 'Adventure' });
@@ -43,6 +52,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, -100, this.worldWidth, 700);
     this.cameras.main.setBounds(0, 0, this.worldWidth, 360);
     this.drawWorld();
+    this.coinHud = this.add.text(18, 15, '🪙 0', { fontFamily: 'Arial', fontSize: '21px', color: '#755010', backgroundColor: '#fff3cf', padding: { x: 12, y: 6 } }).setScrollFactor(0).setDepth(100);
 
     // The physics sprite is invisible; the visible chibi is attached to its position every frame.
     this.add.graphics().fillStyle(0xffffff).fillRect(0, 0, 30, 50).generateTexture('a2-player', 30, 50);
@@ -57,6 +67,7 @@ export class GameScene extends Phaser.Scene {
     this.hero.setVelocityX(this.speed);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.stageLabels.length = 0;
+      this.coins.length = 0;
       this.tweens.killAll();
       this.time.removeAllEvents();
       this.textures.remove('a2-player');
@@ -68,6 +79,13 @@ export class GameScene extends Phaser.Scene {
 
   private drawWorld() {
     this.add.rectangle(this.worldWidth / 2, 245, this.worldWidth, 230, 0x9ed6a2).setDepth(-10);
+    // Camera-relative scenery produces parallax without changing Arcade bodies.
+    for (let x = -100; x < this.worldWidth + 800; x += 320) {
+      this.add.ellipse(x, 225, 440, 190, 0x91c8bc).setScrollFactor(0.23).setDepth(-17);
+      this.add.triangle(x + 80, 205, -135, 115, 0, -120, 135, 115, 0x91b5cc).setScrollFactor(0.42).setDepth(-16);
+      this.add.ellipse(x + 100, 275, 390, 100, 0x72bc88).setScrollFactor(0.64).setDepth(-13);
+    }
+    this.add.circle(690, 65, 33, 0xffdc75).setScrollFactor(0).setDepth(-19);
     this.add.rectangle(this.worldWidth / 2, 160, this.worldWidth, 260, 0xbdeaff).setDepth(-20);
     this.platforms = this.physics.add.staticGroup();
     // Gaps are real holes in the Arcade collision floor, not decorative drawings.
@@ -91,10 +109,13 @@ export class GameScene extends Phaser.Scene {
       }
       for (let c = 0; c < 3; c++) {
         const coin = this.add.circle(x + 100 + c * 35, this.floorY - 100 - c % 2 * 20, 10, 0xffcf4d).setStrokeStyle(2, 0xe5a12c);
+        this.coins.push({ x: coin.x, y: coin.y, circle: coin, taken: false });
         this.tweens.add({ targets: coin, y: coin.y - 8, yoyo: true, repeat: -1, duration: 650 + c * 90 });
       }
       const label = this.add.text(x - 132, this.floorY - 115, `CHECKPOINT ${i + 1}`, { fontSize: '14px', color: '#235c7c', fontStyle: 'bold' });
       this.stageLabels.push(label);
+      const flag = this.add.triangle(x - 142, this.floorY - 65, 0, 0, 0, 32, 46, 15, 0xffac60).setDepth(2);
+      this.tweens.add({ targets: flag, scaleX: 0.88, duration: 650, yoyo: true, repeat: -1 });
     }
     for (let x = 130; x < this.worldWidth; x += 260) {
       this.add.ellipse(x, 85 + (x % 3) * 8, 110, 26, 0xffffff, 0.7).setDepth(-12);
@@ -113,19 +134,47 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createCostume() {
+    this.leftLeg = this.add.rectangle(-9, 31, 10, 23, 0x355f9e).setStrokeStyle(1, 0x244775);
+    this.rightLeg = this.add.rectangle(9, 31, 10, 23, 0x355f9e).setStrokeStyle(1, 0x244775);
+    this.leftArm = this.add.rectangle(-20, 10, 10, 26, 0xf6c29b).setStrokeStyle(1, 0xd49b79);
+    this.rightArm = this.add.rectangle(20, 10, 10, 26, 0xf6c29b).setStrokeStyle(1, 0xd49b79);
     const body = this.add.rectangle(0, 9, 31, 38, 0x437bc4).setStrokeStyle(2, 0x235b91);
     const head = this.add.circle(0, -21, 21, 0xf6c29b).setStrokeStyle(2, 0xd49b79);
     const leftEye = this.add.circle(-7, -21, 2, 0x24364b);
     const rightEye = this.add.circle(7, -21, 2, 0x24364b);
     const hat = this.add.triangle(0, -43, -33, 14, 0, -21, 33, 14, 0xd8b16e).setStrokeStyle(2, 0xa17b45);
     const brim = this.add.ellipse(0, -32, 75, 8, 0xe9c98e).setStrokeStyle(1, 0x9e7946);
-    return this.add.container(this.hero.x, this.hero.y, [body, head, leftEye, rightEye, hat, brim]).setDepth(21);
+    return this.add.container(this.hero.x, this.hero.y, [this.leftLeg, this.rightLeg, this.leftArm, this.rightArm, body, head, leftEye, rightEye, hat, brim]).setDepth(21);
   }
 
   update() {
     if (!this.hero?.active || this.state === 'complete') return;
     this.costume.setPosition(this.hero.x, this.hero.y);
     this.costume.setScale(1, this.ducking ? 0.55 : 1);
+    const grounded = !!this.hero.body?.blocked.down;
+    const moving = Math.abs(this.hero.body?.velocity.x ?? 0) > 5;
+    const stride = grounded && moving && !this.ducking ? Math.sin(this.time.now / 95) * 24 : 0;
+    this.leftLeg.setAngle(stride);
+    this.rightLeg.setAngle(-stride);
+    this.leftArm.setAngle(-stride * 0.75);
+    this.rightArm.setAngle(stride * 0.75);
+    this.costume.setAngle(grounded ? 0 : Math.max(-12, Math.min(12, (this.hero.body?.velocity.y ?? 0) / 45)));
+    if (grounded && !this.lastGrounded) this.dust(this.hero.x, this.floorY);
+    if (grounded && moving && this.time.now - this.lastFootstep > 160) {
+      this.lastFootstep = this.time.now;
+      this.dust(this.hero.x - 12, this.floorY, 2);
+    }
+    this.lastGrounded = grounded;
+    for (const coin of this.coins) {
+      if (coin.taken || !coin.circle.active) continue;
+      if (Math.abs(this.hero.x - coin.x) < 26 && Math.abs(this.hero.y - coin.circle.y) < 58) {
+        coin.taken = true;
+        this.coinCount++;
+        this.coinHud.setText(`🪙 ${this.coinCount}`);
+        this.tweens.killTweensOf(coin.circle);
+        this.tweens.add({ targets: coin.circle, scale: 1.8, alpha: 0, y: coin.circle.y - 24, duration: 260, onComplete: () => coin.circle.destroy() });
+      }
+    }
     if (this.hero.y > 440) { this.restoreCheckpoint(); return; }
     const x = this.obstacleX(this.current);
     if (this.state === 'approaching') {
@@ -166,6 +215,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private dust(x: number, y: number, count = 5) {
+    for (let i = 0; i < count; i++) {
+      const puff = this.add.circle(x + Phaser.Math.Between(-12, 12), y - 2, Phaser.Math.Between(2, 5), 0xfff4d5, 0.8).setDepth(15);
+      this.tweens.add({ targets: puff, x: puff.x + Phaser.Math.Between(-20, 20), y: puff.y - Phaser.Math.Between(7, 24), alpha: 0, scale: 1.5, duration: 300, onComplete: () => puff.destroy() });
+    }
+  }
+
   command(action: GameCommand): boolean {
     if (action === 'reset') { this.resetLevel(); return true; }
     if (!this.sys.isActive() || this.state !== 'ready') return false;
@@ -193,6 +249,9 @@ export class GameScene extends Phaser.Scene {
   private resetLevel() {
     this.current = 0;
     this.state = 'approaching';
+    this.coinCount = 0;
+    this.coinHud?.setText('🪙 0');
+    for (const coin of this.coins) { coin.taken = false; coin.circle.setVisible(true).setAlpha(1).setScale(1); }
     this.ducking = false;
     this.jumpTriggered = false;
     this.resetPending = false;
