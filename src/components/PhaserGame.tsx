@@ -9,16 +9,20 @@ interface Props {
   actions: GameCommand[];
   paused: boolean;
   avatarUrl?: string;
+  feedback: 'happy' | 'encourage' | null;
+  feedbackSerial: number;
   onActionComplete: (index: number) => void;
 }
 
-export default function PhaserGame({ command, serial, total, actions, paused, avatarUrl, onActionComplete }: Props) {
+export default function PhaserGame({ command, serial, total, actions, paused, avatarUrl, feedback, feedbackSerial, onActionComplete }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   const game = useRef<Phaser.Game | null>(null);
   const scene = useRef<GameScene | null>(null);
   const latestCallback = useRef(onActionComplete);
   const lastSerial = useRef(serial);
   const queuedCommand = useRef<{ action: GameCommand; serial: number } | null>(null);
+  const lastFeedbackSerial = useRef(feedbackSerial);
+  const queuedFeedback = useRef<'happy' | 'encourage' | null>(null);
   latestCallback.current = onActionComplete;
 
   useEffect(() => {
@@ -34,6 +38,10 @@ export default function PhaserGame({ command, serial, total, actions, paused, av
     const flush = () => {
       const pending = queuedCommand.current;
       if (pending && s.sys.isActive() && s.command(pending.action)) queuedCommand.current = null;
+      if (queuedFeedback.current && s.sys.isActive()) {
+        s.showFeedback(queuedFeedback.current);
+        queuedFeedback.current = null;
+      }
     };
     game.current.events.on(Phaser.Core.Events.STEP, flush);
     return () => {
@@ -42,6 +50,7 @@ export default function PhaserGame({ command, serial, total, actions, paused, av
       game.current = null;
       scene.current = null;
       queuedCommand.current = null;
+      queuedFeedback.current = null;
     };
   }, [total, avatarUrl]);
 
@@ -51,6 +60,13 @@ export default function PhaserGame({ command, serial, total, actions, paused, av
       queuedCommand.current = { action: command, serial };
     }
   }, [serial, command]);
+
+  useEffect(() => {
+    if (feedbackSerial !== lastFeedbackSerial.current) {
+      lastFeedbackSerial.current = feedbackSerial;
+      queuedFeedback.current = feedback;
+    }
+  }, [feedbackSerial, feedback]);
 
   useEffect(() => { scene?.current?.setPaused(paused); }, [paused]);
   return <div className="phaser-mount" ref={mount} aria-label="Speak and Jump Arcade physics platform game" />;
