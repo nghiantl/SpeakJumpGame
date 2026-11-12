@@ -6,6 +6,8 @@ export interface GameSceneOptions {
   total: number;
   actions: GameCommand[];
   avatarUrl?: string;
+  startIndex?: number;
+  onCoinCollect?: () => void;
   onActionComplete: (index: number) => void;
   onPhaseChange?: (phase: GamePhase) => void;
 }
@@ -54,7 +56,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.current = 0;
+    this.current = Phaser.Math.Clamp(this.options.startIndex ?? 0, 0, Math.max(0, this.options.total - 1));
     this.state = 'approaching';
     this.worldWidth = this.firstObstacleX + Math.max(1, this.options.total) * this.stageLength + 420;
     this.cameras.main.setBackgroundColor('#bdeaff');
@@ -71,7 +73,9 @@ export class GameScene extends Phaser.Scene {
 
     // The physics sprite is invisible; the visible chibi is attached to its position every frame.
     this.add.graphics().fillStyle(0xffffff).fillRect(0, 0, 30, 50).generateTexture('a2-player', 30, 50);
-    this.hero = this.physics.add.sprite(110, this.floorY - 26, 'a2-player');
+    const spawnX = this.current === 0 ? 110 : this.obstacleX(this.current) - 190;
+    this.lastSafeX = spawnX;
+    this.hero = this.physics.add.sprite(spawnX, this.floorY - 26, 'a2-player');
     this.hero.setVisible(false).setCollideWorldBounds(false).setDepth(20);
     this.hero.body!.setSize(26, 48);
     this.hero.setGravityY(this.gravity);
@@ -203,6 +207,7 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(this.hero.x - coin.x) < 26 && Math.abs(this.hero.y - coin.circle.y) < 58) {
         coin.taken = true;
         this.coinCount++;
+        this.options.onCoinCollect?.();
         this.coinHud.setText(String(this.coinCount));
         this.tweens.killTweensOf(coin.circle);
         this.tweens.add({ targets: coin.circle, scale: 1.8, alpha: 0, y: coin.circle.y - 24, duration: 260, onComplete: () => coin.circle.destroy() });
