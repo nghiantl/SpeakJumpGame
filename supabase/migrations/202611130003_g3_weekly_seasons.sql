@@ -92,7 +92,7 @@ create or replace function public.g3_claim_weekly_reward(p_reward_code text)
 returns jsonb language plpgsql security definer set search_path=''
 as $$
 declare v_user uuid:=auth.uid();v_week date:=(date_trunc('week',now() at time zone 'UTC'))::date;
- v_score public.player_weekly_scores%rowtype;v_inserted boolean:=false;
+ v_score public.player_weekly_scores%rowtype;v_count integer:=0;
 begin
  if v_user is null then raise exception 'Authentication required';end if;
  if p_reward_code not in ('weekly_speaker','weekly_regular','weekly_explorer') or p_reward_code is null
@@ -105,8 +105,8 @@ begin
  then raise exception 'Challenge not complete';end if;
  insert into public.player_weekly_rewards(user_id,week_start,reward_code)
  values(v_user,v_week,p_reward_code) on conflict do nothing;
- get diagnostics v_inserted = row_count;
- return jsonb_build_object('claimed',v_inserted,'reward_code',p_reward_code,'week_start',v_week);
+ get diagnostics v_count = row_count;
+ return jsonb_build_object('claimed',(v_count > 0),'reward_code',p_reward_code,'week_start',v_week);
 end $$;
 revoke all on function public.g3_claim_weekly_reward(text) from public,anon;
 grant execute on function public.g3_claim_weekly_reward(text) to authenticated;
