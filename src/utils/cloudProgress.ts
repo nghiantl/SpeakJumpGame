@@ -26,23 +26,65 @@ export async function saveCloud(payload:CloudPayload,expectedRevision:number):Pr
  if(typeof revision!=='number')throw new Error('Không xác nhận được phiên bản bản lưu cloud.');
  return revision;
 }
+// Monotonic merge: never add cumulative counters from two devices (would double count).
+// Existing v1 analytics have event IDs; duplicates are removed by ID.
 export function mergeCloud(local:CloudPayload,remote:CloudPayload):CloudPayload {
+ if(!valid(local)||!valid(remote))throw new Error('Bản lưu không tương thích.');
  const a=local.progress,b=remote.progress;
- const completed=[...new Set([...a.completed,...b.completed])].sort((x,y)=>x-y);
  const progress:SavedProgress={...a,
-   name:a.name!=='Adventurer'?a.name:b.name,
-   photo:a.photo||b.photo,
-   xp:Math.max(a.xp,b.xp),
-   completed,
-   checkpoints:a.checkpoints.map((n,i)=>Math.max(n,b.checkpoints[i]||0)),
-   coins:a.coins.map((n,i)=>Math.max(n,b.coins[i]||0))
+  name:a.name!=='Adventurer'?a.name:b.name,
+  photo:a.photo||b.photo,
+  xp:Math.max(a.xp,b.xp),
+  completed:[...new Set([...a.completed,...b.completed])].sort((x,y)=>x-y),
+  checkpoints:a.checkpoints.map((n,i)=>Math.max(n,b.checkpoints[i]||0)),
+  coins:a.coins.map((n,i)=>Math.max(n,b.coins[i]||0))
  };
- const engagement:EngagementState={...local.engagement,bestCombo:Math.max(local.engagement.bestCombo,remote.engagement.bestCombo),
-   bonusDates:[...new Set([...local.engagement.bonusDates,...remote.engagement.bonusDates])].slice(-180),
-   dailyDates:[...new Set([...local.engagement.dailyDates,...remote.engagement.dailyDates])].slice(-180)};
- // Rewards/review/analytics are not safely mergeable without event IDs. Keep local versions,
- // and offer a separate explicit "restore cloud" action for remote-only records.
- return {...local,progress,engagement};
+ const engagement:EngagementState={...local.engagement,
+  bestCombo:Math.max(local.engagement.bestCombo,remote.engagement.bestCombo),
+  bonusDates:[...new Set([...local.engagement.bonusDates,...remote.engagement.bonusDates])].sort().slice(-180),
+  dailyDates:[...new Set([...local.engagement.dailyDates,...remote.engagement.dailyDates])].sort().slice(-180)
+ };
+ const rd=local.rewards.daily,sd=remote.rewards.daily;
+ const daily=rd.date>sd.date?rd:sd.date>rd.date?sd:{
+  ...rd,challenges:Math.max(rd.challenges,sd.challenges),
+  coins:Math.max(rd.coins,sd.coins),worlds:Math.max(rd.worlds,sd.worlds),
+  claimed:rd.claimed||sd.claimed
+ };
+ const rewards:RewardsState={version:1,daily,
+  chests:[...new Set([...local.rewards.chests,...remote.rewards.chests])],
+  totalChallenges:Math.max(local.rewards.totalChallenges,remote.rewards.totalChallenges)
+ };
+ // The v1 daily counters are aggregates without per-action IDs; MAX avoids duplicate
+ // rewards but cannot perfectly recover independent activity across devices.
+ const eventMap=new Map<string,AnalyticsState['events'][number]>();
+ for(const e of [...remote.analytics.events,...local.analytics.events]){
+  const key=e.id||[e.timestamp,e.kind,e.world,e.challenge??''].join(':');
+  if(!eventMap.has(key))eventMap.set(key,e);
+ }
+ const analytics:AnalyticsState={version:1,
+  events:[...eventMap.values()].sort((x,y)=>x.timestamp.localeCompare(y.timestamp)).slice(-500),
+  worlds:local.analytics.worlds.map((w,i)=>{
+   const r=remote.analytics.worlds[i];
+   return {challenges:Math.max(w.challenges,r?.challenges||0),
+    completions:Math.max(w.completions,r?.completions||0),
+    lastPlayed:w.lastPlayed>(r?.lastPlayed||'')?w.lastPlayed:(r?.lastPlayed||'')}
+  })
+ };
+ const reviewMap=new Map<string,ReviewState['entries'][number]>();
+ for(const entry of [...remote.review.entries,...local.review.entries]){
+  const key=entry.world+':'+entry.challenge;
+  const previous=reviewMap.get(key);
+  if(!previous){reviewMap.set(key,entry);continue}
+  const recent=entry.lastPracticed>=previous.lastPracticed?entry:previous;
+  reviewMap.set(key,{...recent,
+   attempts:Math.max(previous.attempts,entry.attempts),
+   successes:Math.max(previous.successes,entry.successes),
+   misses:Math.max(previous.misses,entry.misses),
+   bestScore:Math.max(previous.bestScore,entry.bestScore)
+  });
+ }
+ const review:ReviewState={version:1,entries:[...reviewMap.values()]};
+ return {version:1,progress,rewards,analytics,review,engagement};
 }
 export function applyCloud(payload:CloudPayload):boolean{
  if(!valid(payload))throw new Error('Không hỗ trợ phiên bản bản lưu.');

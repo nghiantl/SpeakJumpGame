@@ -1,3 +1,4 @@
+import {suspendSync} from '../utils/autoCloudSync';
 import { useEffect, useState } from 'react';
 import { cloudConfigured,loadCloud,saveCloud,localSnapshot,mergeCloud,applyCloud,type CloudRecord } from '../utils/cloudProgress';
 import { getSession, linkAnonymousEmail, sendEmailOtp, verifyEmailOtp, signOutCloud } from '../utils/leaderboard';
@@ -22,7 +23,7 @@ export default function CloudSavePanel({onBack,onRestore}:Props){
   try{
    // Always refetch immediately before upload; optimistic revision rejects concurrent writes.
    const latest=await loadCloud();
-   if(latest&& !window.confirm('Cloud đã có dữ liệu. Đồng bộ XP/checkpoint/combo theo giá trị cao nhất, nhưng dữ liệu thưởng và luyện tập sẽ giữ theo thiết bị hiện tại. Tiếp tục?'))return;
+   if(latest&& !window.confirm('Cloud đã có dữ liệu. Hợp nhất tiến trình, phần thưởng, sự kiện học tập và ôn tập theo quy tắc G.5; bộ đếm tổng hợp không cộng dồn để tránh trùng. Tiếp tục?'))return;
    const payload=latest?mergeCloud(localSnapshot(),latest.payload):localSnapshot();
    const revision=await saveCloud(payload,latest?.revision??0);
    setCloud({payload,revision,updated_at:new Date().toISOString()});
@@ -54,12 +55,12 @@ export default function CloudSavePanel({onBack,onRestore}:Props){
  async function loginOtp(){
   if(!window.confirm('Đăng nhập tài khoản email có thể thay thế phiên Supabase ẩn danh hiện tại. Nếu đã có thành tích trên tài khoản ẩn danh này, hãy lưu/ghi lại ID trước khi tiếp tục.'))return;
   setBusy(true);
-  try{const id=await verifyEmailOtp(email,otp);setIdentity(id);setCloud(await loadCloud());setMessage('Đăng nhập thành công. Hãy chọn Khôi phục cloud để đồng bộ dữ liệu sang thiết bị này.');}
+  try{const id=await verifyEmailOtp(email,otp);suspendSync();setIdentity(id);setCloud(await loadCloud());setMessage('Đăng nhập thành công. G.5 sẽ kiểm tra tài khoản và yêu cầu xác nhận trước khi chuyển dữ liệu giữa hai tài khoản.');}
   catch(e){setMessage(e instanceof Error?e.message:'Mã OTP không hợp lệ.');}finally{setBusy(false)}
  }
  return <section className="panel g2-cloud">
   <div className="eyebrow">PHASE G.2 · CLOUD SAVE</div><h2>☁️ Tài khoản & Tiến trình</h2>
-  <p>Dữ liệu trên máy vẫn được giữ. Cloud chỉ thay đổi khi bạn nhấn lưu hoặc khôi phục.</p>
+  <p>Dữ liệu trên máy vẫn được giữ. G.5 tự động đồng bộ khi có mạng. Các nút lưu và khôi phục thủ công vẫn được giữ làm phương án dự phòng.</p>
   {!cloudConfigured?<p className="notice">Chưa cấu hình Supabase trên Vercel.</p>:<>
    <p><strong>ID người chơi:</strong> <code>{identity||'Đang tải...'}</code></p>
    <p><strong>Bản lưu cloud:</strong> {cloud?'Phiên bản '+cloud.revision+' · '+new Date(cloud.updated_at).toLocaleString('vi-VN'):'Chưa có bản lưu'}</p>
@@ -71,7 +72,7 @@ export default function CloudSavePanel({onBack,onRestore}:Props){
    <p>Chỉ sử dụng email đã xác minh và liên kết với tài khoản cũ. Đăng nhập OTP sẽ giữ cùng user ID, nếu email đã liên kết đúng.</p>
    <div className="g2-actions"><button className="btn secondary" disabled={busy||!email.includes('@')} onClick={()=>void requestOtp()}>Gửi mã đăng nhập</button><input aria-label="Mã OTP" inputMode="numeric" placeholder="Mã OTP trong email" value={otp} onChange={e=>setOtp(e.target.value)} maxLength={12}/><button className="btn primary" disabled={busy||!otp.trim()} onClick={()=>void loginOtp()}>Đăng nhập bằng mã</button></div>
    <p><small>Đăng nhập Google chưa được hỗ trợ. Supabase cần bật Email OTP; cấu hình email template để gửi mã 6 chữ số (Token) thay vì chỉ gửi liên kết. Trước khi đăng nhập trên máy khác, hãy lưu cloud trên máy gốc.</small></p>
-   <button className="btn secondary" disabled={busy} onClick={()=>void signOutCloud().then(()=>{setIdentity('');setCloud(null);setMessage('Đã đăng xuất khỏi Supabase trên thiết bị này. Dữ liệu local vẫn còn.');}).catch(e=>setMessage(String(e)))}>Đăng xuất Supabase</button>
+   <button className="btn secondary" disabled={busy} onClick={()=>void signOutCloud().then(()=>{suspendSync();setIdentity('');setCloud(null);setMessage('Đã đăng xuất khỏi Supabase trên thiết bị này. Dữ liệu local vẫn còn.');}).catch(e=>setMessage(String(e)))}>Đăng xuất Supabase</button>
   </>}
   {message&&<p role="status" className="notice">{message}</p>}
   <button className="btn secondary" onClick={onBack}>← Về hồ sơ</button>

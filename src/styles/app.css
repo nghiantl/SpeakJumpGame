@@ -916,3 +916,11 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g4-table{width:100%;min-width:380px;border-collapse:collapse;text-align:left}
 .g4-table th,.g4-table td{padding:10px;border-bottom:1px solid #dbe6eb}
 @media(max-width:680px){.g4-actions .btn{flex:1}}
+
+
+/* G.5 automatic cloud sync status */
+.g5-sync{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:8px 14px;margin:8px auto;max-width:960px;border:1px solid #bcd5e5;border-radius:12px;background:#f2f9ff;color:#24425b;font-size:13px}
+.g5-sync>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.g5-sync small{font-size:12px;overflow-wrap:anywhere}
+.g5-sync .mini{min-height:30px}
+@media(max-width:600px){.g5-sync{margin:8px 10px;padding:10px;justify-content:flex-start}.g5-sync>div{width:100%}}

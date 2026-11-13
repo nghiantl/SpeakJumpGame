@@ -80,7 +80,7 @@ export function recordLearning(
   if (!Number.isInteger(world) || world < 0 || world >= worlds.length) return current;
   const date = localDateKey(now);
   const event: LearningEvent = {
-    id: `${now.getTime()}-${current.events.length}-${kind}-${world}`,
+    id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${now.getTime()}-${Math.random().toString(36).slice(2)}-${kind}-${world}`,
     timestamp: now.toISOString(), date, kind, world,
     ...(kind === 'challenge' && challenge !== undefined ? { challenge } : {}),
     xp: kind === 'challenge' ? 100 : 0,
