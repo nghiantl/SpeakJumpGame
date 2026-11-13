@@ -227,6 +227,11 @@ begin
  if u is null then raise exception 'Authentication required';end if;
  select jsonb_build_object(
  'my_id',u,
+ 'blocked',coalesce((
+  select jsonb_agg(jsonb_build_object('id',b.blocked_id,'name',coalesce(n.display_name,'Adventurer')) order by b.created_at desc)
+  from public.g6_blocks b left join public.g4_player_names n on n.user_id=b.blocked_id
+  where b.blocker_id=u
+ ),'[]'::jsonb),
  'friends',coalesce((
   select jsonb_agg(jsonb_build_object('id',f.friend_id,'name',coalesce(n.display_name,'Adventurer')) order by coalesce(n.display_name,'Adventurer'))
   from (
