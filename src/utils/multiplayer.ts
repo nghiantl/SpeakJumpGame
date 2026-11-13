@@ -4,7 +4,7 @@ export type Friend={id:string;name:string};
 export type FriendRequest={id:string;sender_id:string;sender_name:string;created_at:string};
 export type FriendMatch={id:string;challenger_id:string;opponent_id:string;challenger_name:string;opponent_name:string;world_index:number;status:'pending'|'active'|'declined'|'cancelled'|'finished'|'expired';created_at:string;deadline_at:string|null;challenger_score:number;opponent_score:number};
 export type FriendRank={id:string;name:string;wins:number;draws:number;played:number};
-export type MultiplayerDashboard={my_id:string;friends:Friend[];requests:FriendRequest[];matches:FriendMatch[];rankings:FriendRank[]};
+export type MultiplayerDashboard={my_id:string;blocked:Friend[];friends:Friend[];requests:FriendRequest[];matches:FriendMatch[];rankings:FriendRank[]};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function rpc<T>(name:string,body:Record<string,unknown>):Promise<T>{
  const session=await getSession();
