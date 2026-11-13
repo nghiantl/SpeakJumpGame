@@ -26,7 +26,7 @@
 - Match results are not recalculated once finalized. They use G.4's immutable ledger.
 - Player display names come from G.4 and default to Adventurer until the user earns a verified score.
 - This phase implements in-app inbox (loaded on opening/refresh), **not** push notifications or Supabase Realtime.
-- Blocking cannot be undone from the G.6 UI yet; the `g6_unblock_player` RPC exists for future account settings.
+- Players can unblock from the G.6 screen. Unblocking does not restore the previous friendship; a new request is required.
 - No account-wide public player search: players exchange full UUIDs directly.
 
 ## UAT (15 checks)
