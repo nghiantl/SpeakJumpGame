@@ -45,7 +45,6 @@ export function mergeCloud(local:CloudPayload,remote:CloudPayload):CloudPayload 
   dailyDates:[...new Set([...local.engagement.dailyDates,...remote.engagement.dailyDates])].sort().slice(-180)
  };
  const rd=local.rewards.daily,sd=remote.rewards.daily;
- const sameDay=rd.date===sd.date;
  const daily=rd.date>sd.date?rd:sd.date>rd.date?sd:{
   ...rd,challenges:Math.max(rd.challenges,sd.challenges),
   coins:Math.max(rd.coins,sd.coins),worlds:Math.max(rd.worlds,sd.worlds),
