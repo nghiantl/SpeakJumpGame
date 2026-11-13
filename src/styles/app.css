@@ -877,3 +877,13 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g1-table .g1-mine { background:#e9fff1; }
 .g1-table tr:last-child td { border-bottom:0; }
 @media(max-width:480px){.g1-actions { flex-direction:column; }.g1-actions .btn { width:100%; }.g1-leaderboard { padding:14px; }}
+
+
+/* G.2 — Account and cloud save panel */
+.g2-cloud { width:min(100%,760px); display:flex; flex-direction:column; gap:14px; }
+.g2-cloud h2,.g2-cloud h3 { margin:0; }
+.g2-cloud code { overflow-wrap:anywhere; font-size:12px; }
+.g2-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.g2-actions .btn { min-height:44px; }
+.g2-actions input { flex:1; min-width:180px; min-height:44px; border:2px solid #c9dfea; border-radius:10px; padding:9px 12px; font:inherit; }
+@media(max-width:520px) { .g2-actions { flex-direction:column; align-items:stretch; }.g2-actions .btn,.g2-actions input { width:100%; min-width:0; } }
