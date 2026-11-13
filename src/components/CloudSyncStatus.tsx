@@ -10,7 +10,7 @@ export default function CloudSyncStatus({safeToApply}:{safeToApply:boolean}){
   const stop=startSyncWatch(()=>safe.current,()=>window.location.reload());
   return()=>{stop();unsubscribe()};
  },[]);
- useEffect(()=>{if(safeToApply&&state.pending&&state.phase!=='account-change')void runAutoSync(true,()=>window.location.reload())},[safeToApply,state.pending,state.phase]);
+ useEffect(()=>{if(safeToApply&&getSyncState().phase!=='account-change')void runAutoSync(true,()=>window.location.reload())},[safeToApply]);
  if(!cloudConfigured)return null;
  const labels:Record<SyncState['phase'],string>={
   disabled:'Chưa cấu hình',idle:state.pending?'Chờ đồng bộ':'Đã đồng bộ',
