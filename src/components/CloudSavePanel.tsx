@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cloudConfigured,loadCloud,saveCloud,localSnapshot,mergeCloud,applyCloud,type CloudRecord } from '../utils/cloudProgress';
-import { getSession, linkAnonymousEmail, signOutCloud } from '../utils/leaderboard';
+import { getSession, linkAnonymousEmail, sendEmailOtp, verifyEmailOtp, signOutCloud } from '../utils/leaderboard';
 type Props={onBack:()=>void;onRestore:()=>void};
 export default function CloudSavePanel({onBack,onRestore}:Props){
  const [cloud,setCloud]=useState<CloudRecord|null>(null);
@@ -8,6 +8,7 @@ export default function CloudSavePanel({onBack,onRestore}:Props){
  const [message,setMessage]=useState('');
  const [email,setEmail]=useState('');
  const [identity,setIdentity]=useState('');
+ const [otp,setOtp]=useState('');
  async function refresh(){
   if(!cloudConfigured)return;
   setBusy(true);
@@ -46,6 +47,16 @@ export default function CloudSavePanel({onBack,onRestore}:Props){
   catch(e){setMessage(e instanceof Error?e.message:'Không thể liên kết email.')}
   finally{setBusy(false)}
  }
+ async function requestOtp(){
+  setBusy(true);try{await sendEmailOtp(email);setMessage('Đã gửi mã đăng nhập đến email đã liên kết. Kiểm tra hộp thư.');}
+  catch(e){setMessage(e instanceof Error?e.message:'Không gửi được OTP.');}finally{setBusy(false)}
+ }
+ async function loginOtp(){
+  if(!window.confirm('Đăng nhập tài khoản email có thể thay thế phiên Supabase ẩn danh hiện tại. Nếu đã có thành tích trên tài khoản ẩn danh này, hãy lưu/ghi lại ID trước khi tiếp tục.'))return;
+  setBusy(true);
+  try{const id=await verifyEmailOtp(email,otp);setIdentity(id);setCloud(await loadCloud());setMessage('Đăng nhập thành công. Hãy chọn Khôi phục cloud để đồng bộ dữ liệu sang thiết bị này.');}
+  catch(e){setMessage(e instanceof Error?e.message:'Mã OTP không hợp lệ.');}finally{setBusy(false)}
+ }
  return <section className="panel g2-cloud">
   <div className="eyebrow">PHASE G.2 · CLOUD SAVE</div><h2>☁️ Tài khoản & Tiến trình</h2>
   <p>Dữ liệu trên máy vẫn được giữ. Cloud chỉ thay đổi khi bạn nhấn lưu hoặc khôi phục.</p>
@@ -56,7 +67,10 @@ export default function CloudSavePanel({onBack,onRestore}:Props){
    <h3>✉️ Liên kết email</h3>
    <p>Thêm email vào tài khoản ẩn danh hiện tại. Chỉ hoàn tất sau khi xác minh email. Không tạo tài khoản mới để tránh đổi ID trên leaderboard.</p>
    <div className="g2-actions"><input type="email" aria-label="Email liên kết" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} maxLength={254}/><button className="btn secondary" disabled={busy||!email.includes('@')} onClick={()=>void linkEmail()}>Gửi xác minh</button></div>
-   <p><small>Đăng nhập đa thiết bị bằng email/Google chưa có trong bản này. Liên kết email chỉ là bước chuẩn bị; không xóa dữ liệu trình duyệt trước khi có cơ chế đăng nhập đầy đủ.</small></p>
+   <h3>🔑 Đăng nhập trên thiết bị khác</h3>
+   <p>Chỉ sử dụng email đã xác minh và liên kết với tài khoản cũ. Đăng nhập OTP sẽ giữ cùng user ID, nếu email đã liên kết đúng.</p>
+   <div className="g2-actions"><button className="btn secondary" disabled={busy||!email.includes('@')} onClick={()=>void requestOtp()}>Gửi mã đăng nhập</button><input aria-label="Mã OTP" inputMode="numeric" placeholder="Mã OTP trong email" value={otp} onChange={e=>setOtp(e.target.value)} maxLength={12}/><button className="btn primary" disabled={busy||!otp.trim()} onClick={()=>void loginOtp()}>Đăng nhập bằng mã</button></div>
+   <p><small>Đăng nhập Google chưa được hỗ trợ. Supabase cần bật Email OTP; cấu hình email template để gửi mã 6 chữ số (Token) thay vì chỉ gửi liên kết. Trước khi đăng nhập trên máy khác, hãy lưu cloud trên máy gốc.</small></p>
    <button className="btn secondary" disabled={busy} onClick={()=>void signOutCloud().then(()=>{setIdentity('');setCloud(null);setMessage('Đã đăng xuất khỏi Supabase trên thiết bị này. Dữ liệu local vẫn còn.');}).catch(e=>setMessage(String(e)))}>Đăng xuất Supabase</button>
   </>}
   {message&&<p role="status" className="notice">{message}</p>}
