@@ -25,7 +25,7 @@ function saveSession(value: any): Session {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return session;
 }
-async function getSession(): Promise<Session> {
+export async function getSession(): Promise<Session> {
   if (!leaderboardConfigured) throw new Error('Missing Supabase environment variables.');
   const current = readSession();
   if (current && current.expires_at > Date.now() + 60_000) return current;
@@ -56,3 +56,29 @@ export async function publishPlayerScore(): Promise<string> {
 }
 export function getPlayerLevel(xp: number): number { return Math.floor(Math.sqrt(Math.max(0,xp) / 200)) + 1; }
 export function getPlayerRank(xp: number): string { const level=getPlayerLevel(xp);return level>=20?'Legend':level>=12?'Champion':level>=6?'Explorer':'Rookie'; }
+
+export async function supabaseRequest(path:string, options:{method?:string;token?:string;body?:unknown}={}):Promise<unknown>{
+ if(!leaderboardConfigured)throw new Error('Supabase chưa được cấu hình.');
+ const response=await fetch(url+path,{method:options.method||'GET',headers:headers(options.token),...(options.body!==undefined?{body:JSON.stringify(options.body)}:{})});
+ return json(response);
+}
+export async function linkAnonymousEmail(email:string):Promise<void>{
+ const session=await getSession();
+ const value=email.trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)||value.length>254)throw new Error('Email không hợp lệ.');
+ await supabaseRequest('/auth/v1/user',{method:'PUT',token:session.access_token,body:{email:value}});
+}
+export async function sendEmailOtp(email:string):Promise<void>{
+ const value=email.trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))throw new Error('Email không hợp lệ.');
+ await supabaseRequest('/auth/v1/otp',{method:'POST',body:{email:value,create_user:false}});
+}
+export async function verifyEmailOtp(email:string,otp:string):Promise<string>{
+ const response=await supabaseRequest('/auth/v1/verify',{method:'POST',body:{email:email.trim().toLowerCase(),token:otp.trim(),type:'email'}}) as any;
+ return saveSession(response).user_id;
+}
+export async function signOutCloud():Promise<void>{
+ const session=readSession();
+ if(session)await supabaseRequest('/auth/v1/logout',{method:'POST',token:session.access_token}).catch(()=>{});
+ localStorage.removeItem(SESSION_KEY);
+}
