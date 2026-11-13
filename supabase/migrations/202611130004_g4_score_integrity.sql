@@ -72,7 +72,7 @@ begin
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_uid::text, 42));
  if (select count(*) from public.g4_attempts where user_id=v_uid and started_at>now()-interval '1 hour')>=120 then
   insert into public.g4_security_flags(user_id,reason) values(v_uid,'too_many_attempts');
-  raise exception 'Too many attempts. Please try later';
+  return null; -- Preserve flag; do not raise/roll back transaction.
  end if;
  if exists(select 1 from public.g4_attempts where user_id=v_uid and started_at>now()-interval '2 seconds') then
   insert into public.g4_security_flags(user_id,reason) values(v_uid,'rapid_start');
@@ -108,14 +108,14 @@ begin
  end if;
  if now()-v_attempt.started_at<interval '3 seconds' then
   insert into public.g4_security_flags(user_id,reason) values(v_uid,'rapid_finish');
-  raise exception 'Attempt completed too quickly';
+  return jsonb_build_object('accepted',false,'duplicate',false,'xp',0,'reason','rapid_finish');
  end if;
  if now()-v_attempt.started_at>interval '30 minutes' then raise exception 'Attempt expired';end if;
  select count(*) into v_count from public.g4_score_events
  where user_id=v_uid and accepted_at>now()-interval '1 hour';
  if v_count>=60 then
   insert into public.g4_security_flags(user_id,reason) values(v_uid,'too_many_completions');
-  raise exception 'Hourly verified-score limit reached';
+  return jsonb_build_object('accepted',false,'duplicate',false,'xp',0,'reason','rate_limited');
  end if;
  update public.g4_attempts set completed_at=now() where id=p_attempt;
  insert into public.g4_score_events(event_id,user_id,world_index,challenge_index,week_start,season_start)
@@ -127,14 +127,7 @@ end $$;
 revoke all on function public.g4_finish_attempt(uuid,text) from public,anon;
 grant execute on function public.g4_finish_attempt(uuid,text) to authenticated;
 
-create or replace view public.g4_verified_all_time with (security_invoker=true) as
-select e.user_id,n.display_name,sum(e.xp)::bigint as xp,count(*)::bigint as challenges
-from public.g4_score_events e join public.g4_player_names n on n.user_id=e.user_id
-group by e.user_id,n.display_name;
--- Views use SECURITY INVOKER; public rankings need aggregate-only access, not raw ledger.
--- Provide read-only SECURITY DEFINER RPC instead of granting the views.
-revoke all on public.g4_verified_all_time from public,anon,authenticated;
-
+-- No direct public views: rankings exposed exclusively through an aggregate-only RPC.
 create or replace function public.g4_verified_rankings(p_period text default 'all')
 returns table(user_id uuid,display_name text,xp bigint,challenges bigint)
 language plpgsql stable security definer set search_path=''
