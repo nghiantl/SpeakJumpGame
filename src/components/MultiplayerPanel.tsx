@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {worlds} from '../data/levels';
-import {blockFriend,finalizeMatch,inviteMatch,loadMultiplayer,multiplayerConfigured,respondFriendRequest,respondMatch,sendFriendRequest,type MultiplayerDashboard} from '../utils/multiplayer';
+import {blockFriend,finalizeMatch,inviteMatch,loadMultiplayer,multiplayerConfigured,respondFriendRequest,respondMatch,sendFriendRequest,unblockFriend,type MultiplayerDashboard} from '../utils/multiplayer';
 type Props={onBack:()=>void;onPlayWorld:(world:number)=>void};
 export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
  const [data,setData]=useState<MultiplayerDashboard|null>(null);
@@ -40,6 +40,8 @@ export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
    <label htmlFor="g6-world">Thế giới thi đấu</label>
    <select id="g6-world" className="textinput" value={world} onChange={e=>setWorld(Number(e.target.value))}>{worlds.map((w,i)=><option key={w.id} value={i}>{w.icon} {w.title}</option>)}</select>
    {data?.friends.length?data.friends.map(f=><div className="g6-item" key={f.id}><div><strong>{f.name}</strong><small>{f.id.slice(0,8)}…</small></div><div className="g6-actions"><button className="mini" disabled={busy} onClick={()=>void act(()=>inviteMatch(f.id,world),'Đã gửi lời thách đấu.')}>⚔️ Thách đấu</button><button className="mini" disabled={busy} onClick={()=>{if(window.confirm('Chặn người này sẽ hủy quan hệ bạn bè và các trận đang mở.'))void act(()=>blockFriend(f.id),'Đã chặn người chơi.')}}>Chặn</button></div></div>):<p className="g6-muted">Chưa có bạn bè. Chia sẻ Player ID để kết bạn.</p>}
+   <h3>🚫 Danh sách chặn ({data?.blocked.length||0})</h3>
+   {data?.blocked.length?data.blocked.map(f=><div className="g6-item" key={f.id}><strong>{f.name}</strong><button className="mini" disabled={busy} onClick={()=>void act(()=>unblockFriend(f.id),'Đã bỏ chặn. Bạn cần gửi lời mời kết bạn lại.')}>Bỏ chặn</button></div>):<p className="g6-muted">Không có người chơi bị chặn.</p>}
    <h3>⚔️ Lời thách đấu đến ({pending.length})</h3>
    {pending.length?pending.map(m=><div className="g6-item" key={m.id}><div><strong>{m.challenger_name}</strong><small>{worlds[m.world_index]?.title} · {new Date(m.created_at).toLocaleString('vi-VN')}</small></div><div className="g6-actions"><button className="mini" disabled={busy} onClick={()=>void act(()=>respondMatch(m.id,true),'Đã nhận thách đấu. Hai người có 24 giờ để luyện nói.')}>Chấp nhận</button><button className="mini" disabled={busy} onClick={()=>void act(()=>respondMatch(m.id,false),'Đã từ chối thách đấu.')}>Từ chối</button></div></div>):<p className="g6-muted">Không có lời thách đấu mới.</p>}
    <h3>🎯 Trận đang diễn ra ({open.length})</h3>
