@@ -905,3 +905,14 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g3-table th,.g3-table td{padding:10px;border-bottom:1px solid #dbe6eb}
 .g3-mine{background:#e4f7eb}
 @media(max-width:680px){.g3-goals{grid-template-columns:1fr}.g3-actions .btn{flex:1}.g3-periods{flex-direction:column;align-items:flex-start}}
+
+
+/* G.4 verified score rankings */
+.g4-panel{width:min(100%,850px);display:flex;flex-direction:column;gap:16px}
+.g4-panel h2{margin:0}
+.g4-summary{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #cde7db;background:#ecf9f1;border-radius:12px}
+.g4-actions{display:flex;gap:10px;flex-wrap:wrap}
+.g4-table-wrap{max-width:100%;overflow-x:auto}
+.g4-table{width:100%;min-width:380px;border-collapse:collapse;text-align:left}
+.g4-table th,.g4-table td{padding:10px;border-bottom:1px solid #dbe6eb}
+@media(max-width:680px){.g4-actions .btn{flex:1}}
