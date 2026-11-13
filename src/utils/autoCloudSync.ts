@@ -49,10 +49,12 @@ export async function runAutoSync(safeToApply:boolean,onApplied?:()=>void){
   const pending=read(key)==='1'||initial!==lastSeen||!read(lastKey);
   publish({userId:uid,pending});
   let merged:CloudPayload|null=null;
+  let sourceFingerprint='';
   for(let i=0;i<4;i++){
    if(run!==generation)return;
    const remote=await loadCloud();
    const local=localSnapshot();
+   sourceFingerprint=JSON.stringify(local);
    merged=remote?mergeCloud(local,remote.payload):local;
    if(!remote||!equal(merged,remote.payload)){
     try{await saveCloud(merged,remote?.revision??0)}
@@ -66,8 +68,7 @@ export async function runAutoSync(safeToApply:boolean,onApplied?:()=>void){
   }
   if(!merged)throw new Error('Không thể giải quyết xung đột sau nhiều lần thử.');
   if(run!==generation)return;
-  const beforeApply=fingerprint();
-  if(safeToApply&&!equal(localSnapshot(),merged)){
+  if(safeToApply&&fingerprint()===sourceFingerprint&&!equal(localSnapshot(),merged)){
    // Never overwrite active Phaser/React in-memory state. Reload immediately
    // after writing merged storage; game only calls safeToApply outside gameplay.
    if(!applyCloud(merged))throw new Error('Không đủ dung lượng lưu dữ liệu đã hợp nhất.');
@@ -78,7 +79,7 @@ export async function runAutoSync(safeToApply:boolean,onApplied?:()=>void){
    onApplied?.();
    return;
   }
-  const changedDuringRequest=fingerprint()!==beforeApply;
+  const changedDuringRequest=fingerprint()!==sourceFingerprint;
   const stillPending=!safeToApply&&!equal(localSnapshot(),merged)||changedDuringRequest;
   write(key,stillPending?'1':'0');
   write(lastKey,new Date().toISOString());
