@@ -887,3 +887,21 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g2-actions .btn { min-height:44px; }
 .g2-actions input { flex:1; min-width:180px; min-height:44px; border:2px solid #c9dfea; border-radius:10px; padding:9px 12px; font:inherit; }
 @media(max-width:520px) { .g2-actions { flex-direction:column; align-items:stretch; }.g2-actions .btn,.g2-actions input { width:100%; min-width:0; } }
+
+
+/* G.3 — Weekly challenges and seasonal rankings */
+.g3-panel{width:min(100%,850px);display:flex;flex-direction:column;gap:16px}
+.g3-panel h2,.g3-panel h3{margin:0}
+.g3-periods,.g3-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.g3-periods{font-size:.9rem}
+.g3-goals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g3-goal{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #d2e4ec;border-radius:14px;background:rgba(255,255,255,.75);min-width:0}
+.g3-goal small{flex:1}
+.g3-goal .btn{width:100%;font-size:.85rem}
+.g3-progress{height:10px;background:#dce8ee;border-radius:999px;overflow:hidden}
+.g3-progress>div{height:100%;background:#3e9b83;border-radius:999px}
+.g3-table-wrap{overflow-x:auto;max-width:100%}
+.g3-table{width:100%;border-collapse:collapse;text-align:left;min-width:350px}
+.g3-table th,.g3-table td{padding:10px;border-bottom:1px solid #dbe6eb}
+.g3-mine{background:#e4f7eb}
+@media(max-width:680px){.g3-goals{grid-template-columns:1fr}.g3-actions .btn{flex:1}.g3-periods{flex-direction:column;align-items:flex-start}}
