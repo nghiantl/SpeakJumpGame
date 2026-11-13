@@ -862,3 +862,18 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
   .f2-game-tools .mini { font-size:12px; padding:7px; }
 }
 @media(prefers-reduced-motion:reduce) { .f2-overlay,.f2-dialog { animation:none!important; transition:none!important; } }
+
+
+/* G.1 — Online leaderboard */
+.g1-leaderboard { width:min(100%,860px); display:flex; flex-direction:column; gap:14px; }
+.g1-leaderboard h2 { margin:0; }
+.g1-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.g1-actions .btn { min-height:46px; }
+.g1-table-wrap { width:100%; max-width:100%; overflow-x:auto; border:1px solid #d7e8f1; border-radius:14px; }
+.g1-table { width:100%; border-collapse:collapse; font-size:14px; min-width:480px; }
+.g1-table th,.g1-table td { padding:12px 10px; text-align:left; border-bottom:1px solid #e2edf4; }
+.g1-table th { background:#e9f7fc; color:#285f7b; }
+.g1-table td small { display:block; font-size:11px; color:#648397; }
+.g1-table .g1-mine { background:#e9fff1; }
+.g1-table tr:last-child td { border-bottom:0; }
+@media(max-width:480px){.g1-actions { flex-direction:column; }.g1-actions .btn { width:100%; }.g1-leaderboard { padding:14px; }}
