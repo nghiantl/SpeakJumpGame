@@ -969,3 +969,20 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g7-result{display:flex;flex-direction:column;gap:8px;align-items:center;padding:18px;background:#fff6dc;border-radius:12px}
 .g7-result span{font-size:2rem;font-weight:800}
 @media(max-width:650px){.g7-notification-root{top:62px;right:12px}.g7-popover{max-height:70dvh}.g7-versus{font-size:.9rem}}
+
+
+/* G.8 competitive events: responsive and Safari safe */
+.g8-panel{max-width:850px;margin-inline:auto}
+.g8-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.g8-tabs .mini{flex:1 1 135px;min-height:42px;white-space:normal}
+.g8-tabs .g8-active{background:#def2e7;border:2px solid #37966a;color:#20563c;font-weight:700}
+.g8-stack{display:flex;flex-direction:column;gap:12px;margin-block:14px}
+.g8-list{display:flex;flex-direction:column;gap:8px}
+.g8-line{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid #dce5ec;border-radius:12px;padding:12px;background:#fff;color:#273744}
+.g8-line>div{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.g8-line small{font-size:.8rem;color:#5b7181;overflow-wrap:anywhere}
+.g8-line span{font-size:.9rem}
+.g8-event-detail{padding:14px;border:1px solid #bfd8e9;border-radius:14px;background:#f3f9ff}
+.g8-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.g8-panel select{padding:12px;border:1px solid #aebfca;border-radius:10px;max-width:100%;background:#fff;color:#273744}
+@media(max-width:600px){.g8-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.g8-tabs .mini{min-width:0}.g8-line{align-items:flex-start}.g8-actions .btn{flex:1 1 130px}}
