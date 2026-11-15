@@ -1,8 +1,9 @@
 import {useEffect,useState} from 'react';
 import {worlds} from '../data/levels';
+import {requestG7Refresh} from '../utils/notifications';
 import {blockFriend,finalizeMatch,inviteMatch,loadMultiplayer,multiplayerConfigured,notifyInboxUpdated,respondFriendRequest,respondMatch,sendFriendRequest,unblockFriend,type MultiplayerDashboard} from '../utils/multiplayer';
-type Props={onBack:()=>void;onPlayWorld:(world:number)=>void};
-export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
+type Props={onBack:()=>void;onPlayWorld:(world:number)=>void;onOpenMatch:(id:string)=>void};
+export default function MultiplayerPanel({onBack,onPlayWorld,onOpenMatch}:Props){
  const [data,setData]=useState<MultiplayerDashboard|null>(null);
  const [target,setTarget]=useState('');
  const [world,setWorld]=useState(0);
@@ -19,7 +20,7 @@ export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
  useEffect(()=>{void refresh()},[]);
  async function act(fn:()=>Promise<unknown>,success:string){
   setBusy(true);setError('');setNotice('');
-  try{await fn();setNotice(success);notifyInboxUpdated();setData(await loadMultiplayer())}
+  try{await fn();setNotice(success);notifyInboxUpdated();requestG7Refresh();setData(await loadMultiplayer())}
   catch(e){setError(e instanceof Error?e.message:'Thao tác thất bại.')}
   finally{setBusy(false)}
  }
@@ -46,13 +47,13 @@ export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
    <h3>⚔️ Lời thách đấu đến ({pending.length})</h3>
    {pending.length?pending.map(m=><div className="g6-item" key={m.id}><div><strong>{m.challenger_name}</strong><small>{worlds[m.world_index]?.title} · {new Date(m.created_at).toLocaleString('vi-VN')}</small></div><div className="g6-actions"><button className="mini" disabled={busy} onClick={()=>void act(()=>respondMatch(m.id,true),'Đã nhận thách đấu. Hai người có 24 giờ để luyện nói.')}>Chấp nhận</button><button className="mini" disabled={busy} onClick={()=>void act(()=>respondMatch(m.id,false),'Đã từ chối thách đấu.')}>Từ chối</button></div></div>):<p className="g6-muted">Không có lời thách đấu mới.</p>}
    <h3>🎯 Trận đang diễn ra ({open.length})</h3>
-   {open.length?open.map(m=><div className="g6-item" key={m.id}><div><strong>{m.challenger_name} vs {m.opponent_name}</strong><small>{worlds[m.world_index]?.title} · Kết thúc {m.deadline_at?new Date(m.deadline_at).toLocaleString('vi-VN'):'—'}</small></div><div className="g6-actions"><button className="mini" onClick={()=>onPlayWorld(m.world_index)}>🎤 Luyện nói</button><button className="mini" disabled={busy||!m.deadline_at||Date.now()<Date.parse(m.deadline_at)} onClick={()=>void act(()=>finalizeMatch(m.id),'Đã tổng kết trận đấu.')}>Chốt kết quả</button></div></div>):<p className="g6-muted">Chưa có trận đang diễn ra.</p>}
+   {open.length?open.map(m=><div className="g6-item" key={m.id}><div><strong>{m.challenger_name} vs {m.opponent_name}</strong><small>{worlds[m.world_index]?.title} · Kết thúc {m.deadline_at?new Date(m.deadline_at).toLocaleString('vi-VN'):'—'}</small></div><div className="g6-actions"><button className="mini" onClick={()=>onOpenMatch(m.id)}>Chi tiết</button><button className="mini" onClick={()=>onPlayWorld(m.world_index)}>🎤 Luyện nói</button><button className="mini" disabled={busy||!m.deadline_at||Date.now()<Date.parse(m.deadline_at)} onClick={()=>void act(()=>finalizeMatch(m.id),'Đã tổng kết trận đấu.')}>Chốt kết quả</button></div></div>):<p className="g6-muted">Chưa có trận đang diễn ra.</p>}
    <p className="g6-muted">Mỗi câu thử thách khác nhau được tính tối đa 100 điểm; tối đa 6 câu/trận. Chỉ tính sự kiện G.4 sau khi chấp nhận và trước hạn 24 giờ. Kết quả chỉ chốt khi hết hạn.</p>
    <h3>🏆 Bảng xếp hạng bạn bè</h3>
    <div className="g6-table-wrap"><table className="g6-table"><thead><tr><th>Người chơi</th><th>Thắng</th><th>Hòa</th><th>Trận</th></tr></thead><tbody>{data?.rankings.length?data.rankings.map(r=><tr key={r.id}><td>{r.name}{r.id===data.my_id?' (Bạn)':''}</td><td>{r.wins}</td><td>{r.draws}</td><td>{r.played}</td></tr>):<tr><td colSpan={4}>Chưa có kết quả trận đấu.</td></tr>}</tbody></table></div>
    <h3>📜 Lịch sử & lời mời đã gửi</h3>
-   {data?.matches.filter(m=>m.status==='pending'&&m.challenger_id===data.my_id).map(m=><div className="g6-item" key={m.id}><strong>Đang chờ {m.opponent_name} chấp nhận</strong><small>{worlds[m.world_index]?.title}</small></div>)}
-   {history.slice(0,30).map(m=><div className="g6-item" key={m.id}><strong>{m.challenger_name} vs {m.opponent_name}</strong><small>{m.status==='finished'?m.challenger_score+' – '+m.opponent_score:m.status} · {worlds[m.world_index]?.title}</small></div>)}
+   {data?.matches.filter(m=>m.status==='pending'&&m.challenger_id===data.my_id).map(m=><div className="g6-item" key={m.id}><button type="button" className="mini" onClick={()=>onOpenMatch(m.id)}>Chi tiết</button><strong>Đang chờ {m.opponent_name} chấp nhận</strong><small>{worlds[m.world_index]?.title}</small></div>)}
+   {history.slice(0,30).map(m=><div className="g6-item" key={m.id}><button type="button" className="mini" onClick={()=>onOpenMatch(m.id)}>Chi tiết</button><strong>{m.challenger_name} vs {m.opponent_name}</strong><small>{m.status==='finished'?m.challenger_score+' – '+m.opponent_score:m.status} · {worlds[m.world_index]?.title}</small></div>)}
   </>}
   {error&&<p role="alert" className="notice">{error}</p>}
   {notice&&<p role="status" className="notice">{notice}</p>}
