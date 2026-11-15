@@ -949,3 +949,23 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g6-menu-button{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .g6-notification-badge{display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 6px;border-radius:999px;background:#d92e45;color:#fff;font-weight:800;font-size:12px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .g6-friend-success{margin:0;padding:10px 12px;border:1px solid #b3e1c4;border-radius:10px;background:#eaf9f0;color:#14633a;font-size:.92rem;font-weight:600}
+
+
+/* G.7 notification center and match details */
+.g7-notification-root{position:fixed;top:70px;right:max(12px,env(safe-area-inset-right));z-index:70}
+.g7-bell{position:relative;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #d8e3ed;border-radius:50%;width:43px;height:43px;box-shadow:0 2px 8px #0002}
+.g7-bell .g6-notification-badge{position:absolute;right:-7px;top:-7px}
+.g7-popover{position:absolute;right:0;top:50px;width:min(390px,calc(100vw - 24px));max-height:min(70vh,600px);overflow:auto;background:#fff;color:#273744;border:1px solid #d8e3ed;border-radius:15px;padding:12px;box-shadow:0 12px 35px #0003}
+.g7-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
+.g7-heading small{display:flex;align-items:center;gap:5px;color:#536b7a}
+.g7-notification-list{display:flex;flex-direction:column;gap:8px;max-height:380px;overflow:auto}
+.g7-notification{display:flex;align-items:flex-start;gap:5px;border:1px solid #d8e3ed;border-radius:10px;padding:8px}
+.g7-unread{background:#eef7ff;border-color:#a9d3ee}
+.g7-notification-open{border:0;background:transparent;color:inherit;text-align:left;display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;cursor:pointer}
+.g7-notification-open span{font-size:.88rem}
+.g7-notification-open small{color:#627989;font-size:.76rem}
+.g7-versus{display:flex;justify-content:space-around;align-items:center;gap:12px;padding:18px;border-radius:12px;background:#eaf4ff;text-align:center;flex-wrap:wrap}
+.g7-versus span{font-weight:800;color:#d34861}
+.g7-result{display:flex;flex-direction:column;gap:8px;align-items:center;padding:18px;background:#fff6dc;border-radius:12px}
+.g7-result span{font-size:2rem;font-weight:800}
+@media(max-width:650px){.g7-notification-root{top:62px;right:12px}.g7-popover{max-height:70dvh}.g7-versus{font-size:.9rem}}
