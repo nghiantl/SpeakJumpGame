@@ -72,8 +72,8 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
     if(resolved)return;
     resolved=true;
     setSpeechFeedback({index,text:'⏳ Đang kiểm tra kết quả...'});
-    const phrases=Array.from(event.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' '));
-    const expected=target.word.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ');
+    const phrases=Array.from(event.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' '));
+    const expected=target.word.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ');
     if(!phrases.includes(expected)){
      setSpeechFeedback({index,text:'❌ Không khớp. Bạn đã nói: '+(phrases[0]||'(không rõ)')+'. Lượt này đã sử dụng, không cộng điểm.'});
      setAttempting(-1);
