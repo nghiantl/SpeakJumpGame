@@ -71,6 +71,7 @@ begin
  or p_challenge is null or p_challenge<0 or p_challenge>=e.challenge_count then raise exception 'Attempt unavailable';end if;
  if exists(select 1 from public.g8_tournament_attempts where entry_id=p_entry and challenge_index=p_challenge) then raise exception 'Already attempted';end if;
  v:=public.g4_start_attempt(e.world_index,p_challenge);
+ if v is null then raise exception 'G.4 attempt limit reached';end if;
  insert into public.g8_tournament_attempts(entry_id,challenge_index,g4_attempt_id) values(p_entry,p_challenge,v);
  return v;
 end $$;
@@ -132,6 +133,8 @@ begin
  insert into public.g6_matches(challenger_id,opponent_id,world_index,status,accepted_at,deadline_at)
  values(other.user_id,u,p_world,'active',now(),now()+interval '24 hours') returning id into m;
  insert into public.g8_competitive_matches(match_id,season_id) values(m,s);
+ perform public.g7_emit(u,other.user_id,'match_accepted',m,'Đã ghép trận xếp hạng','Bạn đã được ghép trận G.8.');
+ perform public.g7_emit(other.user_id,u,'match_accepted',m,'Đã ghép trận xếp hạng','Bạn đã được ghép trận G.8.');
  return jsonb_build_object('status','matched','match_id',m);
 end $$;
 create or replace function public.g8_cancel_matchmaking() returns boolean language plpgsql security definer set search_path='' as $$
@@ -205,3 +208,60 @@ end $$;
 revoke all on function public.g8_list_tournaments() from public,anon;
 revoke all on function public.g8_matchmaking_status() from public,anon;
 grant execute on function public.g8_list_tournaments(),public.g8_matchmaking_status() to authenticated;
+
+-- Close ended events, grant non-monetary achievement badges and freeze season results.
+create table public.g8_season_snapshots(
+ season_id uuid not null references public.g8_seasons(id),
+ user_id uuid not null references auth.users(id) on delete cascade,
+ final_rp integer not null,
+ final_rank integer not null,
+ created_at timestamptz not null default now(),
+ primary key(season_id,user_id)
+);
+alter table public.g8_season_snapshots enable row level security;
+revoke all on public.g8_season_snapshots from public,anon,authenticated;
+grant select on public.g8_season_snapshots to authenticated;
+create policy g8_snapshots_read on public.g8_season_snapshots for select to authenticated using(true);
+create or replace function public.g8_settle_events()
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare t record;s record;winner uuid;daily_count integer;closed_count integer:=0;season_count integer:=0;
+begin
+ for t in select * from public.g8_tournaments where status='open' and ends_at<=now() for update skip locked loop
+  update public.g8_tournaments set status='closed' where id=t.id;
+  if t.kind='weekly' then
+   select user_id into winner from public.g8_tournament_entries
+   where tournament_id=t.id and score>0 order by score desc,created_at asc,user_id limit 1;
+   if winner is not null then
+    insert into public.g8_reward_grants(user_id,achievement_code,season_id,source_id)
+    values(winner,'weekly_champion',t.season_id,t.id) on conflict do nothing;
+   end if;
+  end if;
+  closed_count:=closed_count+1;
+ end loop;
+ for s in select * from public.g8_seasons where ends_at<=now()
+ and not exists(select 1 from public.g8_season_snapshots x where x.season_id=id)
+ for update skip locked loop
+  insert into public.g8_season_snapshots(season_id,user_id,final_rp,final_rank)
+  select s.id,p.user_id,p.rp,row_number() over(order by p.rp desc,p.won desc,p.user_id)::integer
+  from public.g8_season_players p where p.season_id=s.id on conflict do nothing;
+  insert into public.g8_reward_grants(user_id,achievement_code,season_id,source_id)
+  select p.user_id,'diamond',s.id,s.id from public.g8_season_players p
+  where p.season_id=s.id and p.rp>=400 on conflict do nothing;
+  season_count:=season_count+1;
+ end loop;
+ -- Count distinct completed daily events, grant once at seven.
+ for winner in select e.user_id from public.g8_tournament_entries e join public.g8_tournaments t on t.id=e.tournament_id
+ where t.kind='daily' and t.status='closed' and e.score>0 group by e.user_id
+ having count(distinct (t.starts_at at time zone 'UTC')::date)>=7 loop
+  insert into public.g8_reward_grants(user_id,achievement_code,source_id)
+  values(winner,'daily_streak','00000000-0000-0000-0000-000000000008'::uuid) on conflict do nothing;
+ end loop;
+ return jsonb_build_object('tournaments_closed',closed_count,'seasons_frozen',season_count);
+end $$;
+revoke all on function public.g8_settle_events() from public,anon,authenticated;
+grant execute on function public.g8_settle_events() to service_role;
+-- Operator schedules both G.8 settlement jobs via trusted pg_cron:
+-- select cron.schedule('g8-settle-matches','* * * * *','select public.g8_settle_competitive_matches(100)');
+-- select cron.schedule('g8-settle-events','*/5 * * * *','select public.g8_settle_events()');
+-- Do not enable Production scheduling without approval.
