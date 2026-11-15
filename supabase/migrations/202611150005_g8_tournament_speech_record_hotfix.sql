@@ -38,6 +38,7 @@ declare
   v_attempt record;
   v_result jsonb;
   v_accepted boolean;
+  v_reason text;
 begin
   if v_user is null then raise exception 'Authentication required';end if;
   select ta.*,te.user_id,t.ends_at into v_attempt
@@ -55,9 +56,10 @@ begin
   end if;
   v_result:=public.g4_finish_attempt(v_attempt.g4_attempt_id,left(coalesce(p_name,'Adventurer'),24));
   v_accepted:=coalesce((v_result->>'accepted')::boolean,false);
+  v_reason:=coalesce(nullif(v_result->>'reason',''),nullif(v_result->>'error',''),nullif(v_result->>'message',''),'g4_rejected');
   if v_accepted then
     update public.g8_tournament_attempts set accepted=true where id=v_attempt.id;
     update public.g8_tournament_entries set score=least(400,score+100) where id=p_entry;
   end if;
-  return jsonb_build_object('accepted',v_accepted,'duplicate',coalesce((v_result->>'duplicate')::boolean,false));
+  return jsonb_build_object('accepted',v_accepted,'duplicate',coalesce((v_result->>'duplicate')::boolean,false),'reason',case when v_accepted then null else v_reason end);
 end $$;
