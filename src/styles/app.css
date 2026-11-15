@@ -924,3 +924,22 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g5-sync small{font-size:12px;overflow-wrap:anywhere}
 .g5-sync .mini{min-height:30px}
 @media(max-width:600px){.g5-sync{margin:8px 10px;padding:10px;justify-content:flex-start}.g5-sync>div{width:100%}}
+
+
+/* G.6 asynchronous multiplayer */
+.g6-panel{width:min(100%,900px);display:flex;flex-direction:column;gap:14px}
+.g6-panel h2,.g6-panel h3{margin:0}
+.g6-panel h3{margin-top:8px}
+.g6-panel .textinput{min-width:0;max-width:100%}
+.g6-identity{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;background:#eef7ff;border:1px solid #c5dfef;border-radius:12px}
+.g6-identity code{overflow-wrap:anywhere;flex:1}
+.g6-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.g6-actions .textinput{flex:1;min-width:190px}
+.g6-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #d6e5ed;border-radius:12px;background:rgba(255,255,255,.8);min-width:0}
+.g6-item>div:first-child{display:flex;flex-direction:column;gap:5px;min-width:0}
+.g6-item small{color:#607483;overflow-wrap:anywhere}
+.g6-muted{color:#647987;font-size:.9rem}
+.g6-table-wrap{overflow-x:auto;max-width:100%}
+.g6-table{width:100%;min-width:360px;border-collapse:collapse;text-align:left}
+.g6-table th,.g6-table td{padding:10px;border-bottom:1px solid #dce7ee}
+@media(max-width:650px){.g6-item{align-items:stretch;flex-direction:column}.g6-item .g6-actions{width:100%}.g6-actions .btn{flex:1}.g6-identity{align-items:flex-start;flex-direction:column}}
