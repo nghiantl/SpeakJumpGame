@@ -83,7 +83,7 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
     void finishTournamentAttempt(currentEntry,index,'Adventurer').then(async v=>{
      setSpeechFeedback({index,text:v.accepted?(v.duplicate?'✅ Lượt thi đã được ghi nhận trước đó.':'✅ Chính xác! +100 điểm.'):'⚠️ Không thể ghi nhận điểm. '+rejectionMessage(v.reason)});
      await reload();
-    }).catch(e=>setSpeechFeedback({index,text:'⚠️ Lỗi kết nối hoặc máy chủ khi xác nhận điểm. Hãy làm mới để kiểm tra kết quả trước khi thử lại.'});setError(e instanceof Error?e.message:'Lỗi máy chủ')).finally(()=>setAttempting(-1));
+    }).catch(e=>{setSpeechFeedback({index,text:'⚠️ Lỗi kết nối hoặc máy chủ khi xác nhận điểm. Hãy làm mới để kiểm tra kết quả trước khi thử lại.'});setError(e instanceof Error?e.message:'Lỗi máy chủ')}).finally(()=>setAttempting(-1));
    };
    r.onerror=(event:any)=>settle(event?.error==='not-allowed'?'❌ Micro bị chặn. Lượt này đã bắt đầu; hãy kiểm tra quyền micro.':'❌ Không nhận diện được giọng nói ('+String(event?.error||'unknown')+'). Lượt này không có điểm.');
    r.onend=()=>settle('❌ Không nhận được kết quả giọng nói. Lượt này không có điểm.');
