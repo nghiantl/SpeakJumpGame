@@ -17,10 +17,12 @@ let state:SyncState={phase:leaderboardConfigured?'idle':'disabled',pending:false
 let busy=false;
 let lastSeen='';
 let generation=0;
+let awaitingReload=false;
+let lastRemoteCheck=0;
 const publish=(patch:Partial<SyncState>)=>{state={...state,...patch};for(const fn of subscribers)fn({...state})};
 export const getSyncState=()=>({...state});
 export function subscribeSync(fn:(s:SyncState)=>void){subscribers.add(fn);fn(getSyncState());return()=>{subscribers.delete(fn)}}
-export function suspendSync(){generation++;publish({phase:'idle',userId:'',pending:false,message:'Phiên đăng nhập đã thay đổi.'})}
+export function suspendSync(){generation++;awaitingReload=false;lastRemoteCheck=0;publish({phase:'idle',userId:'',pending:false,message:'Phiên đăng nhập đã thay đổi.'})}
 export function acknowledgeAccountChange(){
  if(!state.userId)return;
  write(OWNER_KEY,state.userId);
@@ -28,7 +30,7 @@ export function acknowledgeAccountChange(){
  publish({phase:'idle',pending:true,message:'Đã xác nhận dùng dữ liệu thiết bị cho tài khoản này.'});
 }
 export async function runAutoSync(safeToApply:boolean,onApplied?:()=>void){
- if(busy||!leaderboardConfigured)return;
+ if(busy||awaitingReload||!leaderboardConfigured)return;
  if(typeof navigator!=='undefined'&&!navigator.onLine){publish({phase:'offline',pending:true,message:'Ngoại tuyến; sẽ thử lại khi có mạng.'});return}
  const run=generation;
  busy=true;
@@ -76,11 +78,12 @@ export async function runAutoSync(safeToApply:boolean,onApplied?:()=>void){
    write(key,'0');
    lastSeen=fingerprint();
    publish({phase:'idle',pending:false,lastSync:read(lastKey),message:'Đã hợp nhất tiến trình. Đang tải lại...'});
+   awaitingReload=true;
    onApplied?.();
    return;
   }
   const changedDuringRequest=fingerprint()!==sourceFingerprint;
-  const stillPending=!safeToApply&&!equal(localSnapshot(),merged)||changedDuringRequest;
+  const stillPending=(!safeToApply&&!equal(localSnapshot(),merged))||changedDuringRequest;
   write(key,stillPending?'1':'0');
   write(lastKey,new Date().toISOString());
   lastSeen=stillPending?'':fingerprint();
@@ -103,7 +106,10 @@ export function startSyncWatch(safe:()=>boolean,onApplied:()=>void){
   if(!active)return;
   const current=fingerprint();
   if(current!==lastSeen){markSyncDirty();lastSeen=current}
-  if(state.phase!=='account-change')void runAutoSync(safe(),onApplied);
+  if(awaitingReload||state.phase==='account-change')return;
+  // Avoid unconditional network writes/polls every 12s on mobile Safari.
+  const due=Date.now()-lastRemoteCheck>=60000;
+  if(state.pending||due){lastRemoteCheck=Date.now();void runAutoSync(safe(),onApplied)}
  };
  const interval=window.setInterval(tick,12000);
  const online=()=>tick();

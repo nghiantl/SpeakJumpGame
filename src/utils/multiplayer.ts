@@ -26,3 +26,11 @@ export const unblockFriend=(id:string)=>rpc<boolean>('g6_unblock_player',{p_targ
 export const inviteMatch=(id:string,world:number)=>rpc<string>('g6_create_match',{p_opponent:id,p_world:world});
 export const respondMatch=(id:string,accept:boolean)=>rpc<boolean>('g6_respond_match',{p_id:id,p_accept:accept});
 export const finalizeMatch=(id:string)=>rpc<{status:string;challenger_score:number;opponent_score:number}>('g6_finalize_match',{p_id:id});
+
+export const G6_INBOX_UPDATED='speak-jump-g6-inbox-updated';
+export function notifyInboxUpdated(){window.dispatchEvent(new Event(G6_INBOX_UPDATED))}
+export async function fetchPendingInvitationCount():Promise<number>{
+ const count=await rpc<number>('g6_notification_count',{});
+ if(typeof count!=='number'||!Number.isFinite(count))throw new Error('Không đọc được số thông báo G.6.');
+ return Math.max(0,Math.floor(count));
+}

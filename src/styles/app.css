@@ -943,3 +943,9 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g6-table{width:100%;min-width:360px;border-collapse:collapse;text-align:left}
 .g6-table th,.g6-table td{padding:10px;border-bottom:1px solid #dce7ee}
 @media(max-width:650px){.g6-item{align-items:stretch;flex-direction:column}.g6-item .g6-actions{width:100%}.g6-actions .btn{flex:1}.g6-identity{align-items:flex-start;flex-direction:column}}
+
+
+/* G.6 notification badge and inline invite success */
+.g6-menu-button{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.g6-notification-badge{display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 6px;border-radius:999px;background:#d92e45;color:#fff;font-weight:800;font-size:12px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.g6-friend-success{margin:0;padding:10px 12px;border:1px solid #b3e1c4;border-radius:10px;background:#eaf9f0;color:#14633a;font-size:.92rem;font-weight:600}
