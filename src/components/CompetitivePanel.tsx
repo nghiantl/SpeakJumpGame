@@ -4,6 +4,14 @@ import {currentSeason,seasonRankings,listTournaments,joinTournament,startTournam
 type Props={onBack:()=>void;onOpenMatch:(id:string)=>void};
 type Tab='season'|'events'|'match'|'rewards';
 const dt=(s:string)=>new Date(s).toLocaleString('vi-VN');
+const rejectionMessage=(reason?:string|null)=>{
+ const code=(reason||'').toLowerCase();
+ if(/expired|timeout|too_late|time_limit/.test(code))return 'Lượt thi đã quá thời gian cho phép.';
+ if(/rate|limit|quota|too_many/.test(code))return 'Đã vượt giới hạn lượt thi của hệ thống.';
+ if(/duplicate|already|used/.test(code))return 'Lượt thi đã được xử lý trước đó.';
+ if(/invalid|not_found|missing/.test(code))return 'Phiên thi không hợp lệ hoặc không còn tồn tại.';
+ return 'Máy chủ chưa xác nhận lượt thi hợp lệ (mã: '+(reason&&/^[a-z0-9_-]{1,64}$/i.test(reason)?reason:'g4_rejected')+').';
+};
 const rank=(rp:number)=>rp>=400?'💎 Diamond':rp>=300?'👑 Platinum':rp>=200?'🥇 Gold':rp>=100?'🥈 Silver':'🥉 Bronze';
 export default function CompetitivePanel({onBack,onOpenMatch}:Props){
  const [tab,setTab]=useState<Tab>('season'),[season,setSeason]=useState<Season|null>(null),[ranks,setRanks]=useState<SeasonRank[]>([]);
@@ -73,9 +81,9 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
      return;
     }
     void finishTournamentAttempt(currentEntry,index,'Adventurer').then(async v=>{
-     setSpeechFeedback({index,text:v.accepted?'✅ Khớp! +100 điểm.':'⚠️ Phát âm khớp nhưng máy chủ không chấp nhận điểm.'});
+     setSpeechFeedback({index,text:v.accepted?(v.duplicate?'✅ Lượt thi đã được ghi nhận trước đó.':'✅ Chính xác! +100 điểm.'):'⚠️ Không thể ghi nhận điểm. '+rejectionMessage(v.reason)});
      await reload();
-    }).catch(e=>setSpeechFeedback({index,text:'⚠️ Không xác nhận được điểm: '+(e instanceof Error?e.message:'Lỗi máy chủ')})).finally(()=>setAttempting(-1));
+    }).catch(e=>setSpeechFeedback({index,text:'⚠️ Lỗi kết nối hoặc máy chủ khi xác nhận điểm. Hãy làm mới để kiểm tra kết quả trước khi thử lại.'});setError(e instanceof Error?e.message:'Lỗi máy chủ')).finally(()=>setAttempting(-1));
    };
    r.onerror=(event:any)=>settle(event?.error==='not-allowed'?'❌ Micro bị chặn. Lượt này đã bắt đầu; hãy kiểm tra quyền micro.':'❌ Không nhận diện được giọng nói ('+String(event?.error||'unknown')+'). Lượt này không có điểm.');
    r.onend=()=>settle('❌ Không nhận được kết quả giọng nói. Lượt này không có điểm.');
