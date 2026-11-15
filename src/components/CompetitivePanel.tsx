@@ -59,7 +59,7 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
    let latestPhrases:string[]=[];
    let silenceTimer:ReturnType<typeof setTimeout>|undefined;
    let maxTimer:ReturnType<typeof setTimeout>|undefined;
-   const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\\s+/g,' ').trim();
+   const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
    const expected=normalize(target.word);
    const reload=async()=>{
     const [rankings,registered]=await Promise.all([tournamentRankings(t.id),myTournamentEntries()]);
