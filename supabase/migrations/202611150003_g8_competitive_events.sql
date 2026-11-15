@@ -185,3 +185,23 @@ grant execute on function public.g8_settle_competitive_matches(integer) to servi
 -- Operator: after enabling pg_cron, schedule (service-side only):
 -- select cron.schedule('g8-settle-matches','* * * * *','select public.g8_settle_competitive_matches(100)');
 -- IMPORTANT: G.8 tournaments require dedicated competition tickets; verify G.4 RPC compatibility on Preview.
+
+-- Public event catalog; no private entry information.
+create or replace function public.g8_list_tournaments() returns jsonb language sql stable security definer set search_path='' as $$
+ select coalesce(jsonb_agg(to_jsonb(t) order by t.starts_at desc),'[]'::jsonb)
+ from (select id,name,kind,world_index,challenge_count,starts_at,ends_at,status,content_version from public.g8_tournaments order by starts_at desc limit 50) t
+$$;
+create or replace function public.g8_matchmaking_status() returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare u uuid:=auth.uid();m uuid;
+begin
+ if u is null then raise exception 'Authentication required';end if;
+ if exists(select 1 from public.g8_matchmaking_queue where user_id=u) then return jsonb_build_object('status','queued');end if;
+ select c.match_id into m from public.g8_competitive_matches c join public.g6_matches g on g.id=c.match_id
+ where u in(g.challenger_id,g.opponent_id) and g.status in('active','finished')
+ order by c.created_at desc limit 1;
+ if m is not null then return jsonb_build_object('status','matched','match_id',m);end if;
+ return jsonb_build_object('status','idle');
+end $$;
+revoke all on function public.g8_list_tournaments() from public,anon;
+revoke all on function public.g8_matchmaking_status() from public,anon;
+grant execute on function public.g8_list_tournaments(),public.g8_matchmaking_status() to authenticated;
