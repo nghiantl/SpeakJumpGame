@@ -195,8 +195,18 @@ end $$;
 revoke all on function public.g7_finalize_due_matches(integer) from public,anon,authenticated;
 grant execute on function public.g7_finalize_due_matches(integer) to service_role;
 
--- Schedule via Supabase pg_cron in Preview/Production SQL Editor, after verifying extension:
--- select cron.schedule('g7-finalize-due-matches','* * * * *',
---   'select public.g7_finalize_due_matches(100)');
--- The SQL editor operator must schedule this job explicitly; never expose
--- the finalizer to authenticated clients. Monitor cron.job_run_details.
+-- Install/schedule automatically where pg_cron is already enabled.
+-- On projects without pg_cron, enable it and rerun this block manually.
+do $g7cron$
+begin
+ if exists(select 1 from pg_extension where extname='pg_cron')
+    and exists(select 1 from pg_namespace where nspname='cron') then
+  if not exists(select 1 from cron.job where jobname='g7-finalize-due-matches') then
+   perform cron.schedule('g7-finalize-due-matches','* * * * *',
+    'select public.g7_finalize_due_matches(100)');
+  end if;
+ end if;
+end $g7cron$;
+-- Production gate: verify cron.job and cron.job_run_details, or explicitly
+-- enable pg_cron and schedule the above job before declaring auto-finalization live.
+-- Never expose the finalizer to authenticated clients.
