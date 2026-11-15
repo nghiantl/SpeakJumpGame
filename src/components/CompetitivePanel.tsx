@@ -22,22 +22,22 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
  const run=async(action:()=>Promise<void>)=>{setBusy(true);setError('');setMessage('');try{await action()}catch(e){setError(e instanceof Error?e.message:'Không thể thực hiện thao tác.')}finally{setBusy(false)}};
  const openEvent=(t:Tournament)=>void run(async()=>{setSelected(t.id);setEntry(myEntries.find(e=>e.tournament_id===t.id)?.entry_id||'');setEventRanks(await tournamentRankings(t.id))});
  const play=async(t:Tournament,index:number)=>{
-  if(!entry)return;
+  const currentEntry=myEntries.find(e=>e.tournament_id===t.id)?.entry_id||entry;if(!currentEntry)return;
   const target=worlds[t.world_index]?.challenges[index];
   if(!target){setError('Không tìm thấy câu thi.');return}
   const Ctor=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
   if(!Ctor){setError('Trình duyệt chưa hỗ trợ SpeechRecognition. Hãy dùng trình duyệt tương thích.');return}
   setAttempting(index);setError('');setMessage('🎤 Đang nghe: '+target.word);
   try{
-   await startTournamentAttempt(entry,index);
+   await startTournamentAttempt(currentEntry,index);
    const r=new Ctor();r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;
    r.onresult=(e:any)=>{
     const phrases=Array.from(e.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,''));
     const expected=target.word.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'');
     if(!phrases.includes(expected)){setMessage('Chưa khớp: '+(phrases[0]||'')+'. Lượt này chưa được xác nhận.');setAttempting(-1);return}
-    void finishTournamentAttempt(entry,index,'Adventurer').then(v=>{
+    void finishTournamentAttempt(currentEntry,index,'Adventurer').then(v=>{
      setMessage(v.accepted?'✅ Đã ghi nhận câu thi.':'Lượt thi chưa được máy chủ chấp nhận.');
-     return tournamentRankings(t.id).then(setEventRanks)
+     return Promise.all([tournamentRankings(t.id),myTournamentEntries()]).then(([rankings,registered])=>{setEventRanks(rankings);setMyEntries(registered)})
     }).catch(e=>setError(e instanceof Error?e.message:'Lỗi xác nhận lượt thi.')).finally(()=>setAttempting(-1));
    };
    r.onerror=()=>{setMessage('Không nhận diện được giọng nói.');setAttempting(-1)};
