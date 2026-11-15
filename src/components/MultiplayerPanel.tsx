@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {worlds} from '../data/levels';
-import {blockFriend,finalizeMatch,inviteMatch,loadMultiplayer,multiplayerConfigured,respondFriendRequest,respondMatch,sendFriendRequest,unblockFriend,type MultiplayerDashboard} from '../utils/multiplayer';
+import {blockFriend,finalizeMatch,inviteMatch,loadMultiplayer,multiplayerConfigured,notifyInboxUpdated,respondFriendRequest,respondMatch,sendFriendRequest,unblockFriend,type MultiplayerDashboard} from '../utils/multiplayer';
 type Props={onBack:()=>void;onPlayWorld:(world:number)=>void};
 export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
  const [data,setData]=useState<MultiplayerDashboard|null>(null);
@@ -9,6 +9,7 @@ export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ const [friendNotice,setFriendNotice]=useState('');
  async function refresh(){
   if(!multiplayerConfigured)return;
   setBusy(true);setError('');
@@ -18,7 +19,7 @@ export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
  useEffect(()=>{void refresh()},[]);
  async function act(fn:()=>Promise<unknown>,success:string){
   setBusy(true);setError('');setNotice('');
-  try{await fn();setNotice(success);setData(await loadMultiplayer())}
+  try{await fn();setNotice(success);notifyInboxUpdated();setData(await loadMultiplayer())}
   catch(e){setError(e instanceof Error?e.message:'Thao tác thất bại.')}
   finally{setBusy(false)}
  }
@@ -33,7 +34,7 @@ export default function MultiplayerPanel({onBack,onPlayWorld}:Props){
    {data&&<div className="g6-identity"><strong>Player ID của bạn</strong><code>{data.my_id}</code><button className="mini" onClick={()=>void navigator.clipboard?.writeText(data.my_id)}>Sao chép ID</button></div>}
    <div className="g6-actions"><button className="btn secondary" disabled={busy} onClick={()=>void refresh()}>↻ Làm mới</button></div>
    <h3>✉️ Kết bạn bằng Player ID</h3>
-   <div className="g6-actions"><input aria-label="Player ID người nhận" className="textinput" value={target} onChange={e=>setTarget(e.target.value)} placeholder="UUID của bạn bè" maxLength={36}/><button className="btn primary" disabled={busy||!target.trim()} onClick={()=>void act(()=>sendFriendRequest(target),'Đã gửi lời mời kết bạn.')}>Gửi lời mời</button></div>
+   <div className="g6-actions"><input aria-label="Player ID người nhận" className="textinput" value={target} onChange={e=>{setTarget(e.target.value);setFriendNotice('')}} placeholder="UUID của bạn bè" maxLength={36}/><button className="btn primary" disabled={busy||!target.trim()} onClick={()=>void act(async()=>{await sendFriendRequest(target);setFriendNotice('✓ Đã gửi lời mời kết bạn thành công!');setTarget('')},'Đã gửi lời mời kết bạn.')}>Gửi lời mời</button></div>{friendNotice&&<p className="g6-friend-success" role="status">{friendNotice}</p>}
    <h3>📥 Hộp thư lời mời kết bạn ({data?.requests.length||0})</h3>
    {data?.requests.length?data.requests.map(r=><div className="g6-item" key={r.id}><div><strong>{r.sender_name}</strong><small>{new Date(r.created_at).toLocaleString('vi-VN')}</small></div><div className="g6-actions"><button className="mini" disabled={busy} onClick={()=>void act(()=>respondFriendRequest(r.id,true),'Đã chấp nhận kết bạn.')}>✓ Đồng ý</button><button className="mini" disabled={busy} onClick={()=>void act(()=>respondFriendRequest(r.id,false),'Đã từ chối lời mời.')}>Từ chối</button><button className="mini" disabled={busy} onClick={()=>{if(window.confirm('Chặn người này và hủy lời mời?'))void act(()=>blockFriend(r.sender_id),'Đã chặn người chơi.')}}>Chặn</button></div></div>):<p className="g6-muted">Không có lời mời mới.</p>}
    <h3>👥 Danh sách bạn bè ({data?.friends.length||0})</h3>
