@@ -22,3 +22,7 @@ export const myCompetitiveHistory=()=>rpc<RatingHistory[]>('g8_my_competitive_hi
 export const joinMatchmaking=(world:number)=>rpc<MatchmakingResult>('g8_join_matchmaking',{p_world:world});
 export const cancelMatchmaking=()=>rpc<boolean>('g8_cancel_matchmaking');
 export const matchmakingStatus=()=>rpc<{status:string;match_id?:string}>('g8_matchmaking_status');
+
+export type TournamentAttempt={challenge_index:number;accepted:boolean;started_at:string};
+export type TournamentEntry={entry_id:string;tournament_id:string;status:string;score:number;created_at:string;starts_at:string;ends_at:string;attempts:TournamentAttempt[]};
+export const myTournamentEntries=()=>rpc<TournamentEntry[]>('g8_my_tournament_entries');
