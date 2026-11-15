@@ -29,7 +29,22 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
   if(!Ctor){setError('Trình duyệt chưa hỗ trợ SpeechRecognition. Hãy dùng trình duyệt tương thích.');return}
   setAttempting(index);setError('');setMessage('🎤 Đang nghe: '+target.word);
   try{
-   await startTournamentAttempt(currentEntry,index);
+   // Request microphone permission before consuming a server-side one-shot attempt.
+   // Browsers can reject getUserMedia before showing a prompt if mic is blocked.
+   if(!navigator.mediaDevices?.getUserMedia){
+    throw new Error('Trình duyệt không hỗ trợ cấp quyền micro. Hãy mở trang bằng HTTPS và kiểm tra quyền micro.');
+   }
+   let stream:MediaStream;
+   try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}
+   catch(permissionError){
+    const reason=permissionError instanceof DOMException?permissionError.name:'';
+    throw new Error(reason==='NotAllowedError'||reason==='PermissionDeniedError'
+     ?'Quyền micro bị từ chối. Hãy bật quyền micro cho trang web trong cài đặt trình duyệt rồi thử lại.'
+     :reason==='NotFoundError'?'Không tìm thấy micro trên thiết bị.':'Không thể mở micro. Kiểm tra thiết bị và thử lại.');
+   }
+   stream.getTracks().forEach(track=>track.stop());
+   // Start speech recognition before allocating a G.4 ticket, so failure to
+   // access the mic does not consume a challenge.
    const r=new Ctor();r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;
    r.onresult=(e:any)=>{
     const phrases=Array.from(e.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,''));
@@ -40,9 +55,11 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
      return Promise.all([tournamentRankings(t.id),myTournamentEntries()]).then(([rankings,registered])=>{setEventRanks(rankings);setMyEntries(registered)})
     }).catch(e=>setError(e instanceof Error?e.message:'Lỗi xác nhận lượt thi.')).finally(()=>setAttempting(-1));
    };
-   r.onerror=()=>{setMessage('Không nhận diện được giọng nói.');setAttempting(-1)};
+   r.onerror=(e:any)=>{setError(e?.error==='not-allowed'?'Quyền micro bị chặn. Vui lòng bật quyền micro trong trình duyệt.':'Không nhận diện được giọng nói: '+String(e?.error||'unknown'));setAttempting(-1)};
    r.onend=()=>setAttempting(-1);
    r.start();
+   try{await startTournamentAttempt(currentEntry,index)}
+   catch(startError){r.abort();throw startError}
   }catch(e){setError(e instanceof Error?e.message:'Không bắt đầu được lượt thi.');setAttempting(-1)}
  };
  const chosen=events.find(e=>e.id===selected);const chosenEntry=myEntries.find(e=>e.tournament_id===selected);
