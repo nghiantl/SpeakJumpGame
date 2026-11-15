@@ -986,3 +986,8 @@ button:focus-visible,input:focus-visible { outline:3px solid #146fba; outline-of
 .g8-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .g8-panel select{padding:12px;border:1px solid #aebfca;border-radius:10px;max-width:100%;background:#fff;color:#273744}
 @media(max-width:600px){.g8-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.g8-tabs .mini{min-width:0}.g8-line{align-items:flex-start}.g8-actions .btn{flex:1 1 130px}}
+
+
+/* G.8: keep microphone feedback directly below the selected challenge word. */
+.g8-challenge-content{display:flex;flex:1 1 160px;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.g8-speech-feedback{display:block;color:#385b76;font-weight:600;line-height:1.4;overflow-wrap:anywhere}

@@ -15,7 +15,7 @@ export const seasonRankings=(id:string)=>rpc<SeasonRank[]>('g8_season_rankings',
 export const listTournaments=()=>rpc<Tournament[]>('g8_list_tournaments');
 export const joinTournament=(id:string)=>rpc<string>('g8_join_tournament',{p_id:id});
 export const startTournamentAttempt=(id:string,challenge:number)=>rpc<string>('g8_start_tournament_attempt',{p_entry:id,p_challenge:challenge});
-export const finishTournamentAttempt=(id:string,challenge:number,name:string)=>rpc<{accepted:boolean;duplicate:boolean}>('g8_finish_tournament_attempt',{p_entry:id,p_challenge:challenge,p_name:name});
+export const finishTournamentAttempt=(id:string,challenge:number,name:string)=>rpc<{accepted:boolean;duplicate:boolean;reason?:string|null}>('g8_finish_tournament_attempt',{p_entry:id,p_challenge:challenge,p_name:name});
 export const tournamentRankings=(id:string)=>rpc<TournamentRank[]>('g8_tournament_rankings',{p_id:id});
 export const myAchievements=()=>rpc<Achievement[]>('g8_my_achievements');
 export const myCompetitiveHistory=()=>rpc<RatingHistory[]>('g8_my_competitive_history');
