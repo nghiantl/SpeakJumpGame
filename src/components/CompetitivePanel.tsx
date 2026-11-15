@@ -20,14 +20,14 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
  useEffect(()=>{let live=true;void refresh().catch(e=>{if(live)setError(e instanceof Error?e.message:'Không tải được dữ liệu giải đấu.')});return()=>{live=false}},[]);
  useEffect(()=>{if(tab!=='match'||queue!=='queued')return;const id=window.setInterval(()=>{if(document.visibilityState==='visible')void matchmakingStatus().then(q=>{setQueue(q.status);setMatched(q.match_id||'')}).catch(()=>{})},10000);return()=>window.clearInterval(id)},[tab,queue]);
  const run=async(action:()=>Promise<void>)=>{setBusy(true);setError('');setMessage('');try{await action()}catch(e){setError(e instanceof Error?e.message:'Không thể thực hiện thao tác.')}finally{setBusy(false)}};
- const openEvent=(t:Tournament)=>void run(async()=>{setSelected(t.id);setEntry(myEntries.find(e=>e.tournament_id===t.id)?.entry_id||'');setEventRanks(await tournamentRankings(t.id))});
+ const openEvent=(t:Tournament)=>void run(async()=>{setSpeechFeedback(null);setSelected(t.id);setEntry(myEntries.find(e=>e.tournament_id===t.id)?.entry_id||'');setEventRanks(await tournamentRankings(t.id))});
  const play=async(t:Tournament,index:number)=>{
   const currentEntry=myEntries.find(e=>e.tournament_id===t.id)?.entry_id||entry;if(!currentEntry)return;
   const target=worlds[t.world_index]?.challenges[index];
   if(!target){setError('Không tìm thấy câu thi.');return}
   const Ctor=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
   if(!Ctor){setError('Trình duyệt chưa hỗ trợ SpeechRecognition. Hãy dùng trình duyệt tương thích.');return}
-  setAttempting(index);setError('');setMessage('');setSpeechFeedback({index,text:'🎤 Đang nghe: '+target.word});
+  setAttempting(index);setError('');setMessage('');setSpeechFeedback({index,text:'⏳ Đang chuẩn bị micro...'});
   try{
    // Request microphone permission before consuming a server-side one-shot attempt.
    // Browsers can reject getUserMedia before showing a prompt if mic is blocked.
@@ -46,20 +46,44 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
    // Verify microphone access before allocating a G.4 ticket.
    // Browser speech recognition starts only after the server confirms the ticket.
    const r=new Ctor();r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;
-   r.onresult=(e:any)=>{
-    const phrases=Array.from(e.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,''));
-    const expected=target.word.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'');
-    if(!phrases.includes(expected)){setSpeechFeedback({index,text:'Chưa khớp: '+(phrases[0]||'')+'. Lượt này chưa được xác nhận.'});setAttempting(-1);return}
-    void finishTournamentAttempt(currentEntry,index,'Adventurer').then(v=>{
-     setSpeechFeedback({index,text:v.accepted?'✅ Đã ghi nhận câu thi.':'Lượt thi chưa được máy chủ chấp nhận.'});
-     return Promise.all([tournamentRankings(t.id),myTournamentEntries()]).then(([rankings,registered])=>{setEventRanks(rankings);setMyEntries(registered)})
-    }).catch(e=>setError(e instanceof Error?e.message:'Lỗi xác nhận lượt thi.')).finally(()=>setAttempting(-1));
+   let resolved=false;
+   let ticketIssued=false;
+   const reload=async()=>{
+    const [rankings,registered]=await Promise.all([tournamentRankings(t.id),myTournamentEntries()]);
+    setEventRanks(rankings);setMyEntries(registered);
    };
-   r.onerror=(e:any)=>{setError(e?.error==='not-allowed'?'Quyền micro bị chặn. Vui lòng bật quyền micro trong trình duyệt.':'Không nhận diện được giọng nói: '+String(e?.error||'unknown'));setAttempting(-1)};
-   r.onend=()=>setAttempting(-1);
+   const settle=(text:string)=>{
+    if(resolved)return;
+    resolved=true;
+    setSpeechFeedback({index,text});
+    setAttempting(-1);
+    if(ticketIssued)void reload().catch(()=>{});
+   };
+   r.onstart=()=>{if(!resolved)setSpeechFeedback({index,text:'🎤 Đang nghe: '+target.word})};
+   r.onresult=(event:any)=>{
+    if(resolved)return;
+    resolved=true;
+    setSpeechFeedback({index,text:'⏳ Đang kiểm tra kết quả...'});
+    const phrases=Array.from(event.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' '));
+    const expected=target.word.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ');
+    if(!phrases.includes(expected)){
+     setSpeechFeedback({index,text:'❌ Không khớp. Bạn đã nói: '+(phrases[0]||'(không rõ)')+'. Lượt này đã sử dụng, không cộng điểm.'});
+     setAttempting(-1);
+     void reload().catch(()=>{});
+     return;
+    }
+    void finishTournamentAttempt(currentEntry,index,'Adventurer').then(async v=>{
+     setSpeechFeedback({index,text:v.accepted?'✅ Khớp! +100 điểm.':'⚠️ Phát âm khớp nhưng máy chủ không chấp nhận điểm.'});
+     await reload();
+    }).catch(e=>setSpeechFeedback({index,text:'⚠️ Không xác nhận được điểm: '+(e instanceof Error?e.message:'Lỗi máy chủ')})).finally(()=>setAttempting(-1));
+   };
+   r.onerror=(event:any)=>settle(event?.error==='not-allowed'?'❌ Micro bị chặn. Lượt này đã bắt đầu; hãy kiểm tra quyền micro.':'❌ Không nhận diện được giọng nói ('+String(event?.error||'unknown')+'). Lượt này không có điểm.');
+   r.onend=()=>settle('❌ Không nhận được kết quả giọng nói. Lượt này không có điểm.');
    await startTournamentAttempt(currentEntry,index);
+   ticketIssued=true;
+   setSpeechFeedback({index,text:'🎤 Đang nghe: '+target.word});
    r.start();
-  }catch(e){setError(e instanceof Error?e.message:'Không bắt đầu được lượt thi.');setAttempting(-1)}
+  }catch(e){const detail=e instanceof Error?e.message:'Không bắt đầu được lượt thi.';setSpeechFeedback({index,text:'⚠️ '+detail});setAttempting(-1);void myTournamentEntries().then(setMyEntries).catch(()=>{})}
  };
  const chosen=events.find(e=>e.id===selected);const chosenEntry=myEntries.find(e=>e.tournament_id===selected);
  return <section className="panel g8-panel">
