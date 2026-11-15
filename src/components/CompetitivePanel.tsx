@@ -43,8 +43,8 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
      :reason==='NotFoundError'?'Không tìm thấy micro trên thiết bị.':'Không thể mở micro. Kiểm tra thiết bị và thử lại.');
    }
    stream.getTracks().forEach(track=>track.stop());
-   // Start speech recognition before allocating a G.4 ticket, so failure to
-   // access the mic does not consume a challenge.
+   // Verify microphone access before allocating a G.4 ticket.
+   // Browser speech recognition starts only after the server confirms the ticket.
    const r=new Ctor();r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;
    r.onresult=(e:any)=>{
     const phrases=Array.from(e.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,''));
@@ -57,9 +57,8 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
    };
    r.onerror=(e:any)=>{setError(e?.error==='not-allowed'?'Quyền micro bị chặn. Vui lòng bật quyền micro trong trình duyệt.':'Không nhận diện được giọng nói: '+String(e?.error||'unknown'));setAttempting(-1)};
    r.onend=()=>setAttempting(-1);
+   await startTournamentAttempt(currentEntry,index);
    r.start();
-   try{await startTournamentAttempt(currentEntry,index)}
-   catch(startError){r.abort();throw startError}
   }catch(e){setError(e instanceof Error?e.message:'Không bắt đầu được lượt thi.');setAttempting(-1)}
  };
  const chosen=events.find(e=>e.id===selected);const chosenEntry=myEntries.find(e=>e.tournament_id===selected);
