@@ -11,7 +11,7 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
  const [selected,setSelected]=useState(''),[entry,setEntry]=useState(''),[eventRanks,setEventRanks]=useState<TournamentRank[]>([]);const [myEntries,setMyEntries]=useState<TournamentEntry[]>([]);
  const [world,setWorld]=useState(0),[queue,setQueue]=useState('idle'),[matched,setMatched]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
- const [attempting,setAttempting]=useState(-1);
+ const [attempting,setAttempting]=useState(-1);const [speechFeedback,setSpeechFeedback]=useState<{index:number;text:string}|null>(null);
  const refresh=async()=>{
   const [s,t,a,h,q,registered]=await Promise.all([currentSeason(),listTournaments(),myAchievements(),myCompetitiveHistory(),matchmakingStatus(),myTournamentEntries()]);
   setSeason(s);setEvents(t);setAchievements(a);setHistory(h);setQueue(q.status);setMatched(q.match_id||'');setMyEntries(registered);setEntry(current=>registered.find(e=>e.tournament_id===selected)?.entry_id||current);
@@ -27,7 +27,7 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
   if(!target){setError('Không tìm thấy câu thi.');return}
   const Ctor=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
   if(!Ctor){setError('Trình duyệt chưa hỗ trợ SpeechRecognition. Hãy dùng trình duyệt tương thích.');return}
-  setAttempting(index);setError('');setMessage('🎤 Đang nghe: '+target.word);
+  setAttempting(index);setError('');setMessage('');setSpeechFeedback({index,text:'🎤 Đang nghe: '+target.word});
   try{
    // Request microphone permission before consuming a server-side one-shot attempt.
    // Browsers can reject getUserMedia before showing a prompt if mic is blocked.
@@ -49,9 +49,9 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
    r.onresult=(e:any)=>{
     const phrases=Array.from(e.results[0]).map((a:any)=>String(a.transcript).trim().toLowerCase().replace(/[^a-z0-9 ]/g,''));
     const expected=target.word.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'');
-    if(!phrases.includes(expected)){setMessage('Chưa khớp: '+(phrases[0]||'')+'. Lượt này chưa được xác nhận.');setAttempting(-1);return}
+    if(!phrases.includes(expected)){setSpeechFeedback({index,text:'Chưa khớp: '+(phrases[0]||'')+'. Lượt này chưa được xác nhận.'});setAttempting(-1);return}
     void finishTournamentAttempt(currentEntry,index,'Adventurer').then(v=>{
-     setMessage(v.accepted?'✅ Đã ghi nhận câu thi.':'Lượt thi chưa được máy chủ chấp nhận.');
+     setSpeechFeedback({index,text:v.accepted?'✅ Đã ghi nhận câu thi.':'Lượt thi chưa được máy chủ chấp nhận.'});
      return Promise.all([tournamentRankings(t.id),myTournamentEntries()]).then(([rankings,registered])=>{setEventRanks(rankings);setMyEntries(registered)})
     }).catch(e=>setError(e instanceof Error?e.message:'Lỗi xác nhận lượt thi.')).finally(()=>setAttempting(-1));
    };
@@ -71,7 +71,7 @@ export default function CompetitivePanel({onBack,onOpenMatch}:Props){
   {tab==='events'&&<div className="g8-stack"><h3>📅 Daily & Weekly Tournaments</h3>{myEntries.length>0&&<><h4>🎟️ Giải đấu của tôi ({myEntries.length})</h4>{myEntries.map(e=>{const t=events.find(t=>t.id===e.tournament_id);return t?<div className="g8-line" key={e.entry_id}><div><strong>{t.name}</strong><small>{e.score} điểm · {new Date(t.ends_at).getTime()<=Date.now()?'Đã kết thúc':e.attempts.length>0?'Đang thi':'Đã đăng ký'}</small></div><button type="button" className="mini" onClick={()=>openEvent(t)}>Tiếp tục</button></div>:null})}</>}{events.length===0&&<p>Chưa có giải đấu được tạo.</p>}{events.map(t=><div className="g8-line" key={t.id}><div><strong>{t.kind==='daily'?'☀️':'🏆'} {t.name}</strong><small>{worlds[t.world_index]?.title} · {t.challenge_count} câu · {dt(t.starts_at)} – {dt(t.ends_at)}</small></div><button className="mini" type="button" onClick={()=>openEvent(t)}>Chi tiết</button></div>)}
    {chosen&&<div className="g8-event-detail"><h3>{chosen.name}</h3><p>Bộ câu phiên bản {chosen.content_version} · {chosen.challenge_count} thử thách</p>
     {Date.now()>=Date.parse(chosen.starts_at)&&Date.now()<Date.parse(chosen.ends_at)&&chosen.status==='open'&&<button type="button" className="btn primary" disabled={busy||Boolean(entry)} onClick={()=>void run(async()=>{setEntry(await joinTournament(chosen.id));setMyEntries(await myTournamentEntries());setMessage('Đăng ký thành công!')})}>{entry?'✓ Đã đăng ký':'Đăng ký giải'}</button>}
-    {(entry||chosenEntry)&&<div className="g8-stack"><p role="status">🎟️ {chosenEntry?.attempts.length?'Đang thi':'Đã đăng ký'} · {chosenEntry?.score??0} điểm</p>{Array.from({length:chosen.challenge_count},(_,i)=><div className="g8-line" key={i}><span>{i+1}. {worlds[chosen.world_index]?.challenges[i]?.word}</span><button type="button" className="mini" disabled={attempting>=0||busy||Boolean(chosenEntry?.attempts.some(a=>a.challenge_index===i))||Date.now()>=Date.parse(chosen.ends_at)} onClick={()=>void play(chosen,i)}>{chosenEntry?.attempts.some(a=>a.challenge_index===i)?'✓ Đã thử':'🎤 Nói'}</button></div>)}</div>}
+    {(entry||chosenEntry)&&<div className="g8-stack"><p role="status">🎟️ {chosenEntry?.attempts.length?'Đang thi':'Đã đăng ký'} · {chosenEntry?.score??0} điểm</p>{Array.from({length:chosen.challenge_count},(_,i)=><div className="g8-line" key={i}><div className="g8-challenge-content"><span>{i+1}. {worlds[chosen.world_index]?.challenges[i]?.word}</span>{speechFeedback?.index===i&&<small className="g8-speech-feedback" role="status" aria-live="polite">{speechFeedback.text}</small>}</div><button type="button" className="mini" disabled={attempting>=0||busy||Boolean(chosenEntry?.attempts.some(a=>a.challenge_index===i))||Date.now()>=Date.parse(chosen.ends_at)} onClick={()=>void play(chosen,i)}>{chosenEntry?.attempts.some(a=>a.challenge_index===i)?'✓ Đã thử':'🎤 Nói'}</button></div>)}</div>}
     <h4>Bảng xếp hạng</h4>{eventRanks.map((r,i)=><div className="g8-line" key={r.user_id}><span>#{i+1} {r.display_name}</span><strong>{r.score} điểm</strong></div>)}
    </div>}</div>}
   {tab==='match'&&<div className="g8-stack"><h3>⚔️ Smart Matchmaking</h3><p>Hệ thống tìm đối thủ gần RP của bạn. Trận thi đấu kéo dài 24 giờ và được chốt bởi máy chủ.</p>
